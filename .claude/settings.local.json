@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la)",
+      "Bash(git rev-parse *)",
+      "Bash(npm --version)",
+      "Bash(mkdir tmp_init)",
+      "Bash(npx create-next-app@latest tmp_init --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --no-turbopack)",
+      "Bash(robocopy tmp_init . /E /XD node_modules /XF CLAUDE.md)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(xcopy \"tmp_init\\\\*\" \".\" /E /Y /EXCLUDE:exclude.txt)",
+      "Bash(cp 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/tmp_init/package.json' 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/package.json')",
+      "Bash(cp 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/tmp_init/package-lock.json' 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/package-lock.json')",
+      "Bash(cp 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/tmp_init/tsconfig.json' 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/tsconfig.json')",
+      "Bash(cp 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/tmp_init/next.config.ts' 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/next.config.ts')",
+      "Bash(cp 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/tmp_init/next-env.d.ts' 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/next-env.d.ts')",
+      "Bash(cp -r 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/tmp_init/src' 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/src')",
+      "Bash(cp -r 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/tmp_init/public' 'C:\\\\Users\\\\eliot\\\\OneDrive\\\\Documents\\\\Developpement\\\\2026\\\\companions/public')",
+      "Bash(npm install *)",
+      "Bash(npx prisma *)",
+      "Bash(npx tsc *)",
+      "Bash(git init *)",
+      "Bash(git add *)"
+    ]
+  }
+}

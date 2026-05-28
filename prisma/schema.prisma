@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum EventType {
+  WALK
+  MEAL
+  PEE
+  POOP
+  MED
+  OTHER
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  passwordHash String
+  role         Role       @default(MEMBER)
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  sessions     Session[]
+  apiTokens    ApiToken[]
+  events       Event[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  tokenHash  String    @unique
+  prefix     String
+  scopes     String[]
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model Pet {
+  id        String    @id @default(cuid())
+  name      String
+  species   String
+  breed     String?
+  birthDate DateTime?
+  photoPath String?
+  notes     String?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  events    Event[]
+  vaccines  Vaccine[]
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  petId       String
+  pet         Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  type        EventType
+  occurredAt  DateTime  @default(now())
+  durationMin Int?
+  note        String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+
+  @@index([petId, occurredAt])
+  @@index([userId])
+  @@index([type])
+}
+
+model Vaccine {
+  id             String    @id @default(cuid())
+  petId          String
+  pet            Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  name           String
+  administeredAt DateTime
+  dueAt          DateTime?
+  vet            String?
+  note           String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([petId])
+  @@index([dueAt])
+}
