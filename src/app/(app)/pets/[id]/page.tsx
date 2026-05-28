@@ -72,9 +72,12 @@ export default async function PetDetailPage({ params }: Props) {
 
   // Warning: litter — separate clean and change deadlines
   // cleaned = action "cleaned" OR "changed"; changed = action "changed" only
-  const lastLitterCleanAt = pet.events.find(
-    e => e.type === "LITTER" && ["cleaned", "changed"].includes((e.metadata as { action?: string } | null)?.action ?? "")
-  )?.occurredAt ?? null;
+  const lastLitterCleanAt = pet.events.find(e => {
+    if (e.type !== "LITTER") return false;
+    const meta = e.metadata as { action?: string; cleaned?: boolean } | null;
+    // new format: action = "cleaned" | "changed"; legacy: cleaned = true
+    return meta?.action === "cleaned" || meta?.action === "changed" || meta?.cleaned === true;
+  })?.occurredAt ?? null;
   const lastLitterChangeAt = pet.events.find(
     e => e.type === "LITTER" && (e.metadata as { action?: string } | null)?.action === "changed"
   )?.occurredAt ?? null;
