@@ -13,6 +13,7 @@ import { differenceInYears, differenceInMonths, formatRelativeTime } from "@/lib
 import { getSessionFromCookie } from "@/lib/auth/session";
 import { Role } from "@/generated/prisma";
 import { EVENT_LABEL_MAP, getSpeciesProfile, SPECIES_QUICK_ACTIONS } from "@/lib/species-profiles";
+import { buildLastEventMap } from "@/lib/event-utils";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -45,13 +46,11 @@ export default async function PetDetailPage({ params }: Props) {
   const overdueVaccines = pet.vaccines.filter(v => v.dueAt && new Date(v.dueAt) < now);
   const nextVaccine = pet.vaccines.find(v => v.dueAt && new Date(v.dueAt) >= now);
 
-  // Last event per type for this pet
-  const lastEventMap: Record<string, string> = {};
-  for (const ev of [...pet.events].reverse()) {
-    if (!lastEventMap[ev.type]) {
-      lastEventMap[ev.type] = ev.occurredAt.toISOString();
-    }
-  }
+  // Last event per type — walk/litter metadata pee/poop also count
+  const builtMap = buildLastEventMap(
+    [...pet.events].reverse().map(e => ({ ...e, petId: pet.id }))
+  );
+  const lastEventMap: Record<string, string> = builtMap.get(pet.id) ?? {};
 
   // Recap items: quick action types for this species
   const profile = getSpeciesProfile(pet.species);

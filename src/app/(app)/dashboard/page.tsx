@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuickEventButtons } from "@/components/quick-event-buttons";
 import { formatRelativeTime } from "@/lib/date-utils";
+import { buildLastEventMap } from "@/lib/event-utils";
 
 const EVENT_LABELS: Record<string, string> = {
   WALK:         "🦮 Sortie",
@@ -40,23 +41,18 @@ async function getDashboardData() {
     }),
   ]);
 
-  // Last event per (petId, type)
+  // Last event per (petId, type) — include metadata to extract pee/poop from walks
   const petIds = pets.map(p => p.id);
   const lastEventRows = petIds.length > 0
     ? await db.event.findMany({
         where: { petId: { in: petIds } },
         orderBy: { occurredAt: "desc" },
-        distinct: ["petId", "type"],
-        select: { petId: true, type: true, occurredAt: true },
+        select: { petId: true, type: true, occurredAt: true, metadata: true },
+        take: 500, // cap to avoid pulling entire history
       })
     : [];
 
-  // Build map petId → { type → ISO string }
-  const lastEventMap = new Map<string, Record<string, string>>();
-  for (const row of lastEventRows) {
-    if (!lastEventMap.has(row.petId)) lastEventMap.set(row.petId, {});
-    lastEventMap.get(row.petId)![row.type] = row.occurredAt.toISOString();
-  }
+  const lastEventMap = buildLastEventMap(lastEventRows);
 
   return { pets, upcomingVaccines, lastEventMap };
 }
