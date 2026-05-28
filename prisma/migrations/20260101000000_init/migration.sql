@@ -2,13 +2,12 @@
 CREATE TYPE "Role" AS ENUM ('ADMIN', 'MEMBER');
 
 -- CreateEnum
-CREATE TYPE "EventType" AS ENUM ('WALK', 'MEAL', 'PEE', 'POOP', 'MED', 'OTHER');
+CREATE TYPE "EventType" AS ENUM ('WALK', 'MEAL', 'PEE', 'POOP', 'MED', 'BATH', 'OTHER');
 
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
+    "username" TEXT NOT NULL,
     "passwordHash" TEXT NOT NULL,
     "role" "Role" NOT NULL DEFAULT 'MEMBER',
     "active" BOOLEAN NOT NULL DEFAULT true,
@@ -92,7 +91,7 @@ CREATE TABLE "Vaccine" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 CREATE UNIQUE INDEX "Session_tokenHash_key" ON "Session"("tokenHash");
 CREATE UNIQUE INDEX "ApiToken_tokenHash_key" ON "ApiToken"("tokenHash");
 CREATE INDEX "Session_userId_idx" ON "Session"("userId");
@@ -104,6 +103,14 @@ CREATE INDEX "Event_userId_idx" ON "Event"("userId");
 CREATE INDEX "Event_type_idx" ON "Event"("type");
 CREATE INDEX "Vaccine_petId_idx" ON "Vaccine"("petId");
 CREATE INDEX "Vaccine_dueAt_idx" ON "Vaccine"("dueAt");
+
+-- CreateTable (AppSetting)
+CREATE TABLE "AppSetting" (
+    "key" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    CONSTRAINT "AppSetting_pkey" PRIMARY KEY ("key")
+);
 
 -- AddForeignKey
 ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

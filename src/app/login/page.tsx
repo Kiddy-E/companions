@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Suspense } from "react";
 
 const schema = z.object({
-  email: z.string().email("Email invalide"),
+  username: z.string().min(1, "Nom d'utilisateur requis"),
   password: z.string().min(1, "Mot de passe requis"),
 });
 
@@ -46,7 +46,7 @@ function LoginForm() {
       return;
     }
 
-    setServerError("Email ou mot de passe incorrect");
+    setServerError("Nom d'utilisateur ou mot de passe incorrect");
   }
 
   return (
@@ -69,16 +69,15 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Nom d&apos;utilisateur</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="vous@example.com"
-                autoComplete="email"
-                {...register("email")}
+                id="username"
+                placeholder="admin"
+                autoComplete="username"
+                {...register("username")}
               />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email.message}</p>
+              {errors.username && (
+                <p className="text-xs text-destructive">{errors.username.message}</p>
               )}
             </div>
 

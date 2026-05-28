@@ -15,8 +15,7 @@ export default async function AppLayout({
       <AppNav
         user={{
           id: session.userId,
-          name: session.user.name,
-          email: session.user.email,
+          username: session.user.username,
           role: session.user.role,
         }}
       />

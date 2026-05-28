@@ -5,8 +5,11 @@ import { createSession, setSessionCookie } from "@/lib/auth/session";
 import { Role } from "@/generated/prisma";
 
 const setupSchema = z.object({
-  name: z.string().min(1).max(100),
-  email: z.string().email(),
+  username: z
+    .string()
+    .min(3, "3 caractères minimum")
+    .max(32)
+    .regex(/^[a-zA-Z0-9_-]+$/, "Lettres, chiffres, - et _ uniquement"),
   password: z.string().min(12, "Password must be at least 12 characters"),
 });
 
@@ -34,26 +37,26 @@ export async function POST(req: Request) {
     );
   }
 
-  const { name, email, password } = parsed.data;
+  const { username, password } = parsed.data;
 
-  const existing = await db.user.findUnique({ where: { email } });
+  const existing = await db.user.findUnique({ where: { username } });
   if (existing) {
     return Response.json(
-      { error: { code: "EMAIL_TAKEN", message: "Email already in use" } },
+      { error: { code: "USERNAME_TAKEN", message: "Username already in use" } },
       { status: 409 }
     );
   }
 
   const passwordHash = await hashPassword(password);
   const user = await db.user.create({
-    data: { name, email, passwordHash, role: Role.ADMIN },
+    data: { username, passwordHash, role: Role.ADMIN },
   });
 
   const token = await createSession(user.id);
   const cookie = setSessionCookie(token);
 
   return Response.json(
-    { id: user.id, name: user.name, email: user.email, role: user.role },
+    { id: user.id, username: user.username, role: user.role },
     {
       status: 201,
       headers: {

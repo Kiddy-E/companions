@@ -9,6 +9,7 @@ const updateSchema = z.object({
   durationMin: z.number().int().positive().nullable().optional(),
   note: z.string().max(1000).nullable().optional(),
   type: z.nativeEnum(EventType).optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 }).strict();
 
 type Params = { params: Promise<{ id: string }> };
@@ -41,6 +42,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         ...(parsed.data.durationMin !== undefined && { durationMin: parsed.data.durationMin }),
         ...(parsed.data.note !== undefined && { note: parsed.data.note }),
         ...(parsed.data.type && { type: parsed.data.type }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(parsed.data.metadata !== undefined && { metadata: parsed.data.metadata as any }),
+      },
+      include: {
+        pet: { select: { id: true, name: true } },
+        user: { select: { id: true, username: true } },
       },
     });
 

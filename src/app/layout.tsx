@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   title: "Companions",
   description: "Suivi de vos animaux de compagnie",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/api/settings/favicon",
+    apple: "/api/settings/favicon",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

@@ -5,7 +5,6 @@ import { getAuthContext, requireAdmin, errorResponse, ApiError } from "@/lib/aut
 import { hashPassword } from "@/lib/auth/password";
 
 const updateSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
   active: z.boolean().optional(),
   role: z.enum(["ADMIN", "MEMBER"]).optional(),
   password: z.string().min(12).optional(),
@@ -40,7 +39,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
 
     const data: Record<string, unknown> = {};
-    if (parsed.data.name !== undefined) data.name = parsed.data.name;
     if (parsed.data.active !== undefined) data.active = parsed.data.active;
     if (parsed.data.role !== undefined) data.role = parsed.data.role;
     if (parsed.data.password) data.passwordHash = await hashPassword(parsed.data.password);
@@ -48,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const updated = await db.user.update({
       where: { id },
       data,
-      select: { id: true, name: true, email: true, role: true, active: true },
+      select: { id: true, username: true, role: true, active: true },
     });
 
     return Response.json(updated);

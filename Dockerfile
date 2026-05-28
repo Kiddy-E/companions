@@ -40,9 +40,9 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/src/generated ./src/generated
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/argon2 ./node_modules/argon2
+# Full node_modules overlay — prisma CLI needs its transitive deps (effect, etc.)
+# for `migrate deploy`; standalone tracing only keeps server runtime deps.
+COPY --from=builder /app/node_modules ./node_modules
 COPY scripts/entrypoint.sh ./entrypoint.sh
 
 RUN mkdir -p /data/uploads && chown nextjs:nodejs /data/uploads && \

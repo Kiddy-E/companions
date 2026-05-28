@@ -27,8 +27,7 @@ import { Role } from "@/generated/prisma";
 
 interface NavUser {
   id: string;
-  name: string;
-  email: string;
+  username: string;
   role: Role;
 }
 
@@ -83,12 +82,7 @@ function UserMenu({ user }: { user: NavUser }) {
     router.refresh();
   }
 
-  const initials = user.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  const initials = user.username.slice(0, 2).toUpperCase();
 
   return (
     <DropdownMenu>
@@ -100,8 +94,7 @@ function UserMenu({ user }: { user: NavUser }) {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 text-left min-w-0">
-            <p className="truncate font-medium text-foreground">{user.name}</p>
-            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            <p className="truncate font-medium text-foreground">{user.username}</p>
           </div>
           <ChevronDown className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
         </button>

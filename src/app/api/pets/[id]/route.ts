@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         events: {
           orderBy: { occurredAt: "desc" },
           take: 20,
-          include: { user: { select: { id: true, name: true } } },
+          include: { user: { select: { id: true, username: true } } },
         },
         vaccines: { orderBy: { administeredAt: "desc" } },
         _count: { select: { events: true } },

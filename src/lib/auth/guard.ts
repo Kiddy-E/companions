@@ -4,7 +4,7 @@ import { verifyApiToken, hasScope, type Scope } from "./tokens";
 import { Role } from "@/generated/prisma";
 
 export type AuthContext =
-  | { type: "session"; userId: string; role: Role; name: string }
+  | { type: "session"; userId: string; role: Role; username: string }
   | { type: "token"; userId: string; scopes: string[] };
 
 export async function getAuthContext(
@@ -25,7 +25,7 @@ export async function getAuthContext(
       type: "session",
       userId: session.userId,
       role: session.user.role,
-      name: session.user.name,
+      username: session.user.username,
     };
   }
 

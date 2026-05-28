@@ -12,8 +12,11 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const schema = z.object({
-  name: z.string().min(1, "Nom requis"),
-  email: z.string().email("Email invalide"),
+  username: z
+    .string()
+    .min(3, "3 caractères minimum")
+    .max(32)
+    .regex(/^[a-zA-Z0-9_-]+$/, "Lettres, chiffres, - et _ uniquement"),
   password: z.string().min(12, "12 caractères minimum"),
 });
 
@@ -73,29 +76,15 @@ export default function SetupPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="name">Votre prénom ou nom</Label>
+              <Label htmlFor="username">Nom d&apos;utilisateur</Label>
               <Input
-                id="name"
-                placeholder="Éliot"
-                autoComplete="name"
-                {...register("name")}
+                id="username"
+                placeholder="admin"
+                autoComplete="username"
+                {...register("username")}
               />
-              {errors.name && (
-                <p className="text-xs text-destructive">{errors.name.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="vous@example.com"
-                autoComplete="email"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email.message}</p>
+              {errors.username && (
+                <p className="text-xs text-destructive">{errors.username.message}</p>
               )}
             </div>
 

@@ -15,8 +15,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 
 const schema = z.object({
-  name: z.string().min(1, "Nom requis"),
-  email: z.string().email("Email invalide"),
+  username: z
+    .string()
+    .min(3, "3 caractères minimum")
+    .max(32)
+    .regex(/^[a-zA-Z0-9_-]+$/, "Lettres, chiffres, - et _ uniquement"),
   password: z.string().min(12, "12 caractères minimum"),
   role: z.enum(["ADMIN", "MEMBER"]),
 });
@@ -25,8 +28,7 @@ type FormData = z.infer<typeof schema>;
 
 interface UserRecord {
   id: string;
-  name: string;
-  email: string;
+  username: string;
   role: string;
   active: boolean;
   createdAt: Date;
@@ -117,17 +119,10 @@ export function UsersManager({ initialUsers, currentUserId }: Props) {
               )}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs">Nom</Label>
-                  <Input className="h-8 text-sm" placeholder="Prénom Nom" {...register("name")} />
-                  {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+                  <Label className="text-xs">Nom d&apos;utilisateur</Label>
+                  <Input className="h-8 text-sm" placeholder="utilisateur" {...register("username")} />
+                  {errors.username && <p className="text-xs text-destructive">{errors.username.message}</p>}
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Email</Label>
-                  <Input className="h-8 text-sm" type="email" placeholder="email@..." {...register("email")} />
-                  {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Mot de passe</Label>
                   <Input className="h-8 text-sm" type="password" placeholder="12 car. min." {...register("password")} />
@@ -162,12 +157,12 @@ export function UsersManager({ initialUsers, currentUserId }: Props) {
               <div key={user.id}>
                 <div className="flex items-center gap-3 py-3">
                   <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium ${user.active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                    {user.name[0]?.toUpperCase()}
+                    {user.username[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-sm font-medium ${!user.active ? "text-muted-foreground line-through" : ""}`}>
-                        {user.name}
+                        {user.username}
                       </span>
                       {user.id === currentUserId && (
                         <Badge variant="outline" className="text-xs px-1.5 py-0">Vous</Badge>
@@ -183,7 +178,6 @@ export function UsersManager({ initialUsers, currentUserId }: Props) {
                         )}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
                   </div>
                   {user.id !== currentUserId && (
                     <Button

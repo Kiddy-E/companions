@@ -6,14 +6,14 @@ const sessionAdmin = {
   type: "session" as const,
   userId: "user_1",
   role: Role.ADMIN,
-  name: "Admin",
+  username: "admin",
 };
 
 const sessionMember = {
   type: "session" as const,
   userId: "user_2",
   role: Role.MEMBER,
-  name: "Member",
+  username: "member",
 };
 
 const tokenReadOnly = {

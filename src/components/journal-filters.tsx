@@ -10,6 +10,7 @@ const EVENT_TYPES = [
   { value: "PEE", label: "💧 Pipi" },
   { value: "POOP", label: "💩 Caca" },
   { value: "MED", label: "💊 Soin" },
+  { value: "BATH", label: "🛁 Bain" },
   { value: "OTHER", label: "📝 Autre" },
 ];
 

@@ -18,7 +18,7 @@ vi.mock("@/lib/auth/guard", () => {
 });
 
 mockGetAuthContext.mockResolvedValue({
-  type: "session", userId: "u1", role: Role.ADMIN, name: "Admin",
+  type: "session", userId: "u1", role: Role.ADMIN, username: "admin",
 });
 
 const mockPet = { id: "pet_1", name: "Luna", species: "Chien", breed: null, photoPath: null };

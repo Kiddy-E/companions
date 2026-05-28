@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       },
       include: {
         pet: { select: { id: true, name: true } },
-        user: { select: { id: true, name: true } },
+        user: { select: { id: true, username: true } },
       },
       orderBy: { occurredAt: "desc" },
       take: limit + 1,
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
       },
       include: {
         pet: { select: { id: true, name: true } },
-        user: { select: { id: true, name: true } },
+        user: { select: { id: true, username: true } },
       },
     });
 

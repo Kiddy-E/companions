@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ImageCrop } from "@/components/image-crop";
 
 const schema = z.object({
   name: z.string().min(1, "Le nom est requis").max(100),
@@ -41,7 +43,8 @@ export function PetForm({ pet }: Props) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(
     pet?.photoPath ? `/api/pets/${pet.id}/photo` : null
   );
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | Blob | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -64,9 +67,14 @@ export function PetForm({ pet }: Props) {
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setPhotoFile(file);
-    const url = URL.createObjectURL(file);
-    setPhotoPreview(url);
+    setCropSrc(URL.createObjectURL(file));
+    e.target.value = "";
+  }
+
+  function handleCrop(blob: Blob) {
+    setPhotoFile(blob);
+    setPhotoPreview(URL.createObjectURL(blob));
+    setCropSrc(null);
   }
 
   async function onSubmit(data: FormData) {
@@ -98,7 +106,7 @@ export function PetForm({ pet }: Props) {
       // Upload photo if selected
       if (photoFile) {
         const fd = new FormData();
-        fd.append("photo", photoFile);
+        fd.append("photo", photoFile, "photo.jpg");
         await fetch(`/api/pets/${saved.id}/photo`, { method: "POST", body: fd });
       }
 
@@ -143,6 +151,23 @@ export function PetForm({ pet }: Props) {
         />
         <p className="text-xs text-muted-foreground">Cliquez pour ajouter une photo</p>
       </div>
+
+      {/* Crop modal */}
+      <Dialog open={!!cropSrc} onOpenChange={v => { if (!v) setCropSrc(null); }}>
+        <DialogContent>
+          <DialogHeader onClose={() => setCropSrc(null)}>
+            <DialogTitle>Recadrer la photo</DialogTitle>
+          </DialogHeader>
+          {cropSrc && (
+            <ImageCrop
+              src={cropSrc}
+              outputSize={800}
+              onCrop={handleCrop}
+              onCancel={() => setCropSrc(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Name */}
       <div className="space-y-1.5">

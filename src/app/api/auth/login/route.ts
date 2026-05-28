@@ -5,7 +5,7 @@ import { verifyPassword } from "@/lib/auth/password";
 import { createSession, setSessionCookie } from "@/lib/auth/session";
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  username: z.string().min(1),
   password: z.string().min(1),
 });
 
@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { email, password } = parsed.data;
-  const user = await db.user.findUnique({ where: { email } });
+  const { username, password } = parsed.data;
+  const user = await db.user.findUnique({ where: { username } });
 
   // Constant-time: always verify even if user doesn't exist
   const dummyHash =
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   if (!user || !user.active || !valid) {
     return Response.json(
-      { error: { code: "INVALID_CREDENTIALS", message: "Invalid email or password" } },
+      { error: { code: "INVALID_CREDENTIALS", message: "Invalid username or password" } },
       { status: 401 }
     );
   }
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   const cookie = setSessionCookie(token);
 
   return Response.json(
-    { id: user.id, name: user.name, email: user.email, role: user.role },
+    { id: user.id, username: user.username, role: user.role },
     {
       headers: {
         "Set-Cookie": `${cookie.name}=${cookie.value}; Path=${cookie.options.path}; HttpOnly; SameSite=Lax; Max-Age=${cookie.options.maxAge}${cookie.options.secure ? "; Secure" : ""}`,

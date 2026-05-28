@@ -26,7 +26,7 @@ vi.mock("@/lib/auth/guard", () => {
 });
 
 mockGetAuthContext.mockResolvedValue({
-  type: "session", userId: "user_1", role: Role.ADMIN, name: "Admin",
+  type: "session", userId: "user_1", role: Role.ADMIN, username: "admin",
 });
 
 const mockVaccines = [

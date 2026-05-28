@@ -18,13 +18,19 @@ enum EventType {
   PEE
   POOP
   MED
+  BATH
   OTHER
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model User {
   id           String     @id @default(cuid())
-  email        String     @unique
-  name         String
+  username     String     @unique
   passwordHash String
   role         Role       @default(MEMBER)
   active       Boolean    @default(true)

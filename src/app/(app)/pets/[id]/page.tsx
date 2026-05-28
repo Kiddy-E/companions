@@ -18,6 +18,7 @@ const EVENT_LABELS: Record<string, string> = {
   PEE: "💧 Pipi",
   POOP: "💩 Caca",
   MED: "💊 Soin",
+  BATH: "🛁 Bain",
   OTHER: "📝 Autre",
 };
 
@@ -30,7 +31,7 @@ export default async function PetDetailPage({ params }: Props) {
       events: {
         orderBy: { occurredAt: "desc" },
         take: 30,
-        include: { user: { select: { id: true, name: true } } },
+        include: { user: { select: { id: true, username: true } } },
       },
       vaccines: { orderBy: { dueAt: "asc" } },
       _count: { select: { events: true } },
@@ -162,7 +163,7 @@ export default async function PetDetailPage({ params }: Props) {
                             })}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            · {event.user.name}
+                            · {event.user.username}
                           </span>
                         </div>
                         {event.note && (

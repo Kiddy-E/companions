@@ -36,6 +36,20 @@ export async function saveUploadedPhoto(file: File): Promise<string> {
   return filename;
 }
 
+export async function saveUploadedIcon(file: File | Blob): Promise<string> {
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const processed = await sharp(buffer)
+    .resize(512, 512, { fit: "cover" })
+    .png()
+    .toBuffer();
+
+  const filename = `icon_${crypto.randomBytes(12).toString("hex")}.png`;
+  const uploadDir = path.resolve(env.UPLOAD_DIR);
+  await fs.mkdir(uploadDir, { recursive: true });
+  await fs.writeFile(path.join(uploadDir, filename), processed);
+  return filename;
+}
+
 export async function deletePhoto(filename: string): Promise<void> {
   if (!filename || filename.includes("..") || filename.includes("/")) return;
   const filepath = path.join(path.resolve(env.UPLOAD_DIR), filename);

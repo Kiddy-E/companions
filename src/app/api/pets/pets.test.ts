@@ -43,7 +43,7 @@ mockGetAuthContext.mockResolvedValue({
   type: "session",
   userId: "user_1",
   role: Role.ADMIN,
-  name: "Admin",
+  username: "admin",
 });
 
 const mockPets = [

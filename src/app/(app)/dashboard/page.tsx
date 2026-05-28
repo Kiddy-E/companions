@@ -48,7 +48,7 @@ export default async function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {greeting}, {session.user.name.split(" ")[0]} 👋
+            {greeting}, {session.user.username} 👋
           </h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {pets.length === 0
@@ -171,6 +171,7 @@ const EVENT_LABELS: Record<string, string> = {
   PEE: "💧 Pipi",
   POOP: "💩 Caca",
   MED: "💊 Soin",
+  BATH: "🛁 Bain",
   OTHER: "📝 Autre",
 };
 
