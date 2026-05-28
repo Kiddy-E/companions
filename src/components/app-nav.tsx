@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   PawPrint,
   LayoutDashboard,
-  Syringe,
   Settings,
   LogOut,
   Menu,
@@ -34,7 +33,6 @@ interface NavUser {
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/pets", label: "Animaux", icon: PawPrint },
-  { href: "/vaccines", label: "Vaccins", icon: Syringe },
   { href: "/journal", label: "Journal", icon: BookOpen },
 ];
 

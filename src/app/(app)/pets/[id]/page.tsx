@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Edit, PawPrint, Syringe, Plus, Calendar } from "lucide-react";
+import { ArrowLeft, Edit, PawPrint, Syringe, Plus, Calendar, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,18 @@ import { EVENT_LABEL_MAP, getSpeciesProfile, SPECIES_QUICK_ACTIONS } from "@/lib
 import { buildLastEventMap } from "@/lib/event-utils";
 
 type Props = { params: Promise<{ id: string }> };
+
+interface PetSettings {
+  litterLifetimeHours?: number;
+  mealGrams?: number;
+  meals?: { time: string }[];
+}
+
+interface TrainingMeta {
+  skill?: string;
+  progress?: number;
+  stars?: number;
+}
 
 export default async function PetDetailPage({ params }: Props) {
   const { id } = await params;
@@ -43,28 +55,66 @@ export default async function PetDetailPage({ params }: Props) {
   if (!session) redirect("/login");
 
   const now = new Date();
+  const settings: PetSettings = (pet.settings as PetSettings) ?? {};
   const overdueVaccines = pet.vaccines.filter(v => v.dueAt && new Date(v.dueAt) < now);
   const nextVaccine = pet.vaccines.find(v => v.dueAt && new Date(v.dueAt) >= now);
 
-  // Last event per type — walk/litter metadata pee/poop also count
+  // Last event per type (walk/litter pee/poop from metadata)
   const builtMap = buildLastEventMap(
     [...pet.events].reverse().map(e => ({ ...e, petId: pet.id }))
   );
   const lastEventMap: Record<string, string> = builtMap.get(pet.id) ?? {};
 
-  // Recap items: quick action types for this species
+  // Recap types + warnings
   const profile = getSpeciesProfile(pet.species);
   const recapTypes = SPECIES_QUICK_ACTIONS[profile].slice(0, 6);
 
+  // Warning: litter overdue
+  const litterWarning = (() => {
+    if (!settings.litterLifetimeHours) return null;
+    const lastLitter = lastEventMap["LITTER"];
+    if (!lastLitter) return `Litière jamais nettoyée`;
+    const hoursAgo = (now.getTime() - new Date(lastLitter).getTime()) / 3600000;
+    if (hoursAgo > settings.litterLifetimeHours) {
+      return `Litière à changer (${Math.floor(hoursAgo)}h écoulées / max ${settings.litterLifetimeHours}h)`;
+    }
+    return null;
+  })();
+
+  // Warning: meal overdue
+  const mealWarning = (() => {
+    if (!settings.meals?.length) return null;
+    const lastMeal = lastEventMap["MEAL"];
+    if (!lastMeal) return "Aucun repas enregistré aujourd'hui";
+    const gapHours = 24 / settings.meals.length;
+    const hoursAgo = (now.getTime() - new Date(lastMeal).getTime()) / 3600000;
+    if (hoursAgo > gapHours + 1) return `Repas en retard (dernier il y a ${Math.floor(hoursAgo)}h)`;
+    return null;
+  })();
+
+  // Training skills: latest progress per skill name
+  const skillMap = new Map<string, { progress: number; stars?: number; lastDate: string }>();
+  for (const ev of pet.events) {
+    if (ev.type !== "TRAINING") continue;
+    const meta = ev.metadata as TrainingMeta | null;
+    if (!meta?.skill) continue;
+    const skillKey = meta.skill;
+    if (!skillMap.has(skillKey)) {
+      skillMap.set(skillKey, {
+        progress: meta.progress ?? 0,
+        stars: meta.stars,
+        lastDate: ev.occurredAt.toISOString(),
+      });
+    }
+  }
+  const skills = Array.from(skillMap.entries()).sort((a, b) => b[1].progress - a[1].progress);
+  const knownSkills = skills.map(([name]) => name);
+
   return (
     <div className="space-y-6">
-      {/* Back */}
       <div className="flex items-start gap-4">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
-          <Link href="/pets">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Animaux
-          </Link>
+          <Link href="/pets"><ArrowLeft className="h-4 w-4 mr-1" />Animaux</Link>
         </Button>
       </div>
 
@@ -85,9 +135,7 @@ export default async function PetDetailPage({ params }: Props) {
           </p>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {pet.birthDate && (
-              <Badge variant="secondary" className="text-xs">
-                🎂 {formatAge(pet.birthDate)}
-              </Badge>
+              <Badge variant="secondary" className="text-xs">🎂 {formatAge(pet.birthDate)}</Badge>
             )}
             {overdueVaccines.length > 0 && (
               <Badge variant="destructive" className="text-xs">
@@ -98,19 +146,32 @@ export default async function PetDetailPage({ params }: Props) {
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/pets/${pet.id}/edit`}>
-              <Edit className="h-3.5 w-3.5 mr-1.5" />
-              Modifier
-            </Link>
+            <Link href={`/pets/${pet.id}/edit`}><Edit className="h-3.5 w-3.5 mr-1.5" />Modifier</Link>
           </Button>
           <DeletePetButton petId={pet.id} petName={pet.name} />
         </div>
       </div>
 
       {pet.notes && (
-        <p className="text-sm text-muted-foreground bg-muted/50 rounded-lg px-4 py-3">
-          {pet.notes}
-        </p>
+        <p className="text-sm text-muted-foreground bg-muted/50 rounded-lg px-4 py-3">{pet.notes}</p>
+      )}
+
+      {/* Warnings */}
+      {(litterWarning || mealWarning) && (
+        <div className="space-y-2">
+          {litterWarning && (
+            <div className="flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              {litterWarning}
+            </div>
+          )}
+          {mealWarning && (
+            <div className="flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              {mealWarning}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Récap */}
@@ -155,9 +216,42 @@ export default async function PetDetailPage({ params }: Props) {
             petName={pet.name}
             species={pet.species}
             lastEvents={lastEventMap}
+            knownSkills={knownSkills}
+            defaultMealGrams={settings.mealGrams}
           />
         </CardContent>
       </Card>
+
+      {/* Training skills */}
+      {skills.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">🏅 Compétences</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {skills.map(([name, data]) => (
+              <div key={name} className="space-y-1">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{name}</span>
+                  <div className="flex items-center gap-2">
+                    {data.stars != null && (
+                      <span className="text-xs">{"⭐".repeat(data.stars)}</span>
+                    )}
+                    <span className="text-xs font-medium text-primary">{data.progress}%</span>
+                  </div>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div
+                    className="bg-primary h-2 rounded-full transition-all"
+                    style={{ width: `${data.progress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">{formatRelativeTime(data.lastDate)}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Journal */}
@@ -168,23 +262,14 @@ export default async function PetDetailPage({ params }: Props) {
               Journal ({pet._count.events})
             </h2>
             {pet._count.events > 50 && (
-              <Link href={`/journal?petId=${pet.id}`} className="text-xs text-primary hover:underline">
-                Voir tout
-              </Link>
+              <Link href={`/journal?petId=${pet.id}`} className="text-xs text-primary hover:underline">Voir tout</Link>
             )}
           </div>
           {pet.events.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-sm text-muted-foreground">Aucun événement enregistré</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="py-8 text-center"><p className="text-sm text-muted-foreground">Aucun événement enregistré</p></CardContent></Card>
           ) : (
             <JournalList
-              events={pet.events.map(e => ({
-                ...e,
-                occurredAt: e.occurredAt.toISOString(),
-              }))}
+              events={pet.events.map(e => ({ ...e, occurredAt: e.occurredAt.toISOString() }))}
               currentUserId={session.userId}
               isAdmin={session.user.role === Role.ADMIN}
             />
@@ -199,46 +284,31 @@ export default async function PetDetailPage({ params }: Props) {
               Vaccins ({pet.vaccines.length})
             </h2>
             <Button variant="ghost" size="sm" asChild>
-              <Link href={`/pets/${pet.id}/vaccines/new`}>
-                <Plus className="h-3.5 w-3.5" />
-              </Link>
+              <Link href={`/pets/${pet.id}/vaccines/new`}><Plus className="h-3.5 w-3.5" /></Link>
             </Button>
           </div>
           <Card>
             <CardContent className="pt-4">
               {pet.vaccines.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Aucun vaccin enregistré
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-4">Aucun vaccin enregistré</p>
               ) : (
                 <div className="space-y-0">
                   {pet.vaccines.map((vaccine, i) => {
                     const overdue = vaccine.dueAt && new Date(vaccine.dueAt) < now;
-                    const dueSoon =
-                      vaccine.dueAt &&
-                      !overdue &&
-                      new Date(vaccine.dueAt) < new Date(now.getTime() + 30 * 86400000);
+                    const dueSoon = vaccine.dueAt && !overdue && new Date(vaccine.dueAt) < new Date(now.getTime() + 30 * 86400000);
                     return (
                       <div key={vaccine.id}>
                         <div className="flex items-start justify-between py-2.5 gap-2">
                           <div className="min-w-0">
                             <p className="text-sm font-medium">{vaccine.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(vaccine.administeredAt).toLocaleDateString("fr-FR", {
-                                day: "numeric", month: "short", year: "numeric",
-                              })}
+                              {new Date(vaccine.administeredAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
                               {vaccine.vet ? ` · ${vaccine.vet}` : ""}
                             </p>
                           </div>
                           {vaccine.dueAt && (
-                            <Badge
-                              variant={overdue ? "destructive" : dueSoon ? "outline" : "secondary"}
-                              className="text-xs flex-shrink-0"
-                            >
-                              Rappel{" "}
-                              {new Date(vaccine.dueAt).toLocaleDateString("fr-FR", {
-                                day: "numeric", month: "short", year: "numeric",
-                              })}
+                            <Badge variant={overdue ? "destructive" : dueSoon ? "outline" : "secondary"} className="text-xs flex-shrink-0">
+                              Rappel {new Date(vaccine.dueAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
                             </Badge>
                           )}
                         </div>

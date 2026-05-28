@@ -4,12 +4,20 @@ import { db } from "@/lib/db";
 import { getAuthContext, requireScope, errorResponse, ApiError } from "@/lib/auth/guard";
 import { deletePhoto } from "@/lib/storage/upload";
 
+const mealTimeSchema = z.object({ time: z.string().regex(/^\d{2}:\d{2}$/) });
+const settingsSchema = z.object({
+  litterLifetimeHours: z.number().int().positive().optional(),
+  mealGrams: z.number().int().positive().nullable().optional(),
+  meals: z.array(mealTimeSchema).optional(),
+}).optional();
+
 const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   species: z.string().min(1).max(50).optional(),
   breed: z.string().max(100).nullable().optional(),
   birthDate: z.string().date().nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
+  settings: settingsSchema,
 }).strict();
 
 type Params = { params: Promise<{ id: string }> };
@@ -70,6 +78,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           birthDate: parsed.data.birthDate ? new Date(parsed.data.birthDate) : null,
         }),
         ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(parsed.data.settings !== undefined && { settings: parsed.data.settings as any }),
       },
     });
 

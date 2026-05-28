@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Upload, RotateCcw, Loader2 } from "lucide-react";
+import { Upload, RotateCcw, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ImageCrop } from "@/components/image-crop";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,6 +17,7 @@ export function FaviconManager({ hasFavicon }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(
     hasFavicon ? `/api/settings/favicon?t=${Date.now()}` : null
   );
@@ -38,7 +39,9 @@ export function FaviconManager({ hasFavicon }: Props) {
       if (res.ok) {
         const url = URL.createObjectURL(blob);
         setPreviewUrl(url);
-        router.refresh();
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+        router.refresh(); // updates layout generateMetadata → new cache-busted favicon URL
       }
     } finally {
       setUploading(false);
@@ -99,7 +102,7 @@ export function FaviconManager({ hasFavicon }: Props) {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <Button
               size="sm"
               variant="outline"
@@ -112,6 +115,12 @@ export function FaviconManager({ hasFavicon }: Props) {
                 <><Upload className="h-3.5 w-3.5 mr-1.5" />Changer l&apos;icône</>
               )}
             </Button>
+            {saved && (
+              <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                Enregistré
+              </span>
+            )}
             {(previewUrl || hasFavicon) && (
               <Button size="sm" variant="ghost" onClick={handleReset} className="text-muted-foreground">
                 <RotateCcw className="h-3.5 w-3.5 mr-1.5" />

@@ -93,6 +93,7 @@ describe("POST /api/pets", () => {
       birthDate: null,
       photoPath: null,
       notes: null,
+      settings: null,
       active: true,
       createdAt: new Date(),
       updatedAt: new Date(),

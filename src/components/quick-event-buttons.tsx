@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { WalkModal } from "@/components/walk-modal";
 import { LitterModal } from "@/components/litter-modal";
+import { MealModal } from "@/components/meal-modal";
+import { TrainingModal } from "@/components/training-modal";
 import { QuickEventModal } from "@/components/quick-event-modal";
 import { getSpeciesProfile, SPECIES_QUICK_ACTIONS, EVENT_LABEL_MAP } from "@/lib/species-profiles";
 import { formatRelativeTime } from "@/lib/date-utils";
@@ -12,17 +14,23 @@ interface Props {
   petId: string;
   petName: string;
   species: string;
-  // ISO date strings keyed by event type — when each was last recorded
   lastEvents?: Record<string, string>;
+  knownSkills?: string[];
+  defaultMealGrams?: number;
 }
 
 type ModalState =
   | { type: "walk" }
   | { type: "litter" }
+  | { type: "meal" }
+  | { type: "training" }
   | { type: "generic"; eventType: string }
   | null;
 
-export function QuickEventButtons({ petId, petName, species, lastEvents = {} }: Props) {
+export function QuickEventButtons({
+  petId, petName, species,
+  lastEvents = {}, knownSkills = [], defaultMealGrams,
+}: Props) {
   const [modal, setModal] = useState<ModalState>(null);
 
   const profile = getSpeciesProfile(species);
@@ -33,8 +41,10 @@ export function QuickEventButtons({ petId, petName, species, lastEvents = {} }: 
   const gridActions = actions.filter(t => !isFullWidth(t));
 
   function handleClick(type: string) {
-    if (type === "WALK")   return setModal({ type: "walk" });
-    if (type === "LITTER") return setModal({ type: "litter" });
+    if (type === "WALK")     return setModal({ type: "walk" });
+    if (type === "LITTER")   return setModal({ type: "litter" });
+    if (type === "MEAL")     return setModal({ type: "meal" });
+    if (type === "TRAINING") return setModal({ type: "training" });
     setModal({ type: "generic", eventType: type });
   }
 
@@ -68,26 +78,12 @@ export function QuickEventButtons({ petId, petName, species, lastEvents = {} }: 
         </div>
       </div>
 
-      <WalkModal
-        petId={petId}
-        petName={petName}
-        open={modal?.type === "walk"}
-        onOpenChange={v => { if (!v) setModal(null); }}
-      />
-      <LitterModal
-        petId={petId}
-        petName={petName}
-        open={modal?.type === "litter"}
-        onOpenChange={v => { if (!v) setModal(null); }}
-      />
+      <WalkModal petId={petId} petName={petName} open={modal?.type === "walk"} onOpenChange={v => { if (!v) setModal(null); }} />
+      <LitterModal petId={petId} petName={petName} open={modal?.type === "litter"} onOpenChange={v => { if (!v) setModal(null); }} />
+      <MealModal petId={petId} petName={petName} open={modal?.type === "meal"} onOpenChange={v => { if (!v) setModal(null); }} defaultGrams={defaultMealGrams} />
+      <TrainingModal petId={petId} petName={petName} open={modal?.type === "training"} onOpenChange={v => { if (!v) setModal(null); }} knownSkills={knownSkills} />
       {modal?.type === "generic" && (
-        <QuickEventModal
-          petId={petId}
-          petName={petName}
-          eventType={modal.eventType}
-          open
-          onOpenChange={v => { if (!v) setModal(null); }}
-        />
+        <QuickEventModal petId={petId} petName={petName} eventType={modal.eventType} open onOpenChange={v => { if (!v) setModal(null); }} />
       )}
     </>
   );

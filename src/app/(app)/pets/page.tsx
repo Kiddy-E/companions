@@ -5,8 +5,10 @@ import Link from "next/link";
 import { Plus, PawPrint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { differenceInYears, differenceInMonths } from "@/lib/date-utils";
+import { QuickEventButtons } from "@/components/quick-event-buttons";
+import { buildLastEventMap } from "@/lib/event-utils";
+import { formatRelativeTime, differenceInYears, differenceInMonths } from "@/lib/date-utils";
+import { EVENT_LABEL_MAP } from "@/lib/species-profiles";
 
 export default async function PetsPage() {
   const session = await getSessionFromCookie();
@@ -15,11 +17,19 @@ export default async function PetsPage() {
   const pets = await db.pet.findMany({
     where: { active: true },
     orderBy: { name: "asc" },
-    include: {
-      _count: { select: { events: true, vaccines: true } },
-      events: { orderBy: { occurredAt: "desc" }, take: 1 },
-    },
   });
+
+  const petIds = pets.map(p => p.id);
+  const lastEventRows = petIds.length > 0
+    ? await db.event.findMany({
+        where: { petId: { in: petIds } },
+        orderBy: { occurredAt: "desc" },
+        select: { petId: true, type: true, occurredAt: true, metadata: true },
+        take: 500,
+      })
+    : [];
+
+  const lastEventMap = buildLastEventMap(lastEventRows);
 
   return (
     <div className="space-y-6">
@@ -43,7 +53,7 @@ export default async function PetsPage() {
           <PawPrint className="h-12 w-12 text-muted-foreground/40 mb-4" />
           <h3 className="font-semibold text-lg">Aucun animal pour l&#39;instant</h3>
           <p className="text-muted-foreground text-sm mt-1 mb-4">
-            Commencez par ajouter votre premier animal de compagnie
+            Commencez par ajouter votre premier animal
           </p>
           <Button asChild>
             <Link href="/pets/new">
@@ -54,61 +64,65 @@ export default async function PetsPage() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {pets.map((pet) => (
-            <Link key={pet.id} href={`/pets/${pet.id}`}>
-              <Card className="hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer h-full">
+          {pets.map((pet) => {
+            const lastEvents = lastEventMap.get(pet.id) ?? {};
+            const latestEntry = Object.entries(lastEvents).sort(
+              (a, b) => new Date(b[1]).getTime() - new Date(a[1]).getTime()
+            )[0];
+            const age = pet.birthDate ? formatAge(pet.birthDate) : null;
+
+            return (
+              <Card key={pet.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {pet.photoPath ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={`/api/pets/${pet.id}/photo`}
-                          alt={pet.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <PawPrint className="h-6 w-6 text-primary" />
+                    {/* Avatar with age badge */}
+                    <Link href={`/pets/${pet.id}`} className="relative flex-shrink-0 h-12 w-12">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                        {pet.photoPath ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={`/api/pets/${pet.id}/photo`} alt={pet.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <PawPrint className="h-6 w-6 text-primary" />
+                        )}
+                      </div>
+                      {age && (
+                        <span className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground text-[9px] font-semibold rounded-full px-1.5 py-0.5 leading-none whitespace-nowrap">
+                          {age}
+                        </span>
                       )}
-                    </div>
+                    </Link>
                     <div className="min-w-0">
-                      <CardTitle className="text-base">{pet.name}</CardTitle>
+                      <Link href={`/pets/${pet.id}`} className="hover:text-primary transition-colors">
+                        <CardTitle className="text-base">{pet.name}</CardTitle>
+                      </Link>
                       <p className="text-xs text-muted-foreground capitalize">
-                        {pet.species}
-                        {pet.breed ? ` · ${pet.breed}` : ""}
+                        {pet.species}{pet.breed ? ` · ${pet.breed}` : ""}
                       </p>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex flex-wrap gap-1.5">
-                    {pet.birthDate && (
-                      <Badge variant="secondary" className="text-xs">
-                        🎂 {formatAge(pet.birthDate)}
-                      </Badge>
-                    )}
-                    <Badge variant="secondary" className="text-xs">
-                      {pet._count.events} événement{pet._count.events !== 1 ? "s" : ""}
-                    </Badge>
-                    {pet._count.vaccines > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        💉 {pet._count.vaccines} vaccin{pet._count.vaccines !== 1 ? "s" : ""}
-                      </Badge>
-                    )}
-                  </div>
-                  {pet.events[0] && (
+                <CardContent className="space-y-3">
+                  {latestEntry ? (
                     <p className="text-xs text-muted-foreground">
-                      Dernière activité{" "}
-                      {new Date(pet.events[0].occurredAt).toLocaleDateString("fr-FR", {
-                        day: "numeric",
-                        month: "short",
-                      })}
+                      Dernière activité :{" "}
+                      <span className="font-medium text-foreground">
+                        {EVENT_LABEL_MAP[latestEntry[0]]?.emoji}{" "}{EVENT_LABEL_MAP[latestEntry[0]]?.label ?? latestEntry[0]}
+                      </span>{" "}
+                      {formatRelativeTime(latestEntry[1])}
                     </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Aucune activité enregistrée</p>
                   )}
+                  <QuickEventButtons
+                    petId={pet.id}
+                    petName={pet.name}
+                    species={pet.species}
+                    lastEvents={lastEvents}
+                  />
                 </CardContent>
               </Card>
-            </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -116,9 +130,10 @@ export default async function PetsPage() {
 }
 
 function formatAge(birthDate: Date): string {
-  const years = differenceInYears(new Date(), new Date(birthDate));
-  if (years >= 1) return `${years} an${years > 1 ? "s" : ""}`;
-  const months = differenceInMonths(new Date(), new Date(birthDate));
-  if (months >= 1) return `${months} mois`;
-  return "< 1 mois";
+  const now = new Date();
+  const years = differenceInYears(now, new Date(birthDate));
+  if (years >= 1) return `${years}a`;
+  const months = differenceInMonths(now, new Date(birthDate));
+  if (months >= 1) return `${months}m`;
+  return "<1m";
 }

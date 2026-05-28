@@ -84,6 +84,7 @@ model Pet {
   photoPath String?
   notes     String?
   active    Boolean   @default(true)
+  settings  Json?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   events    Event[]
