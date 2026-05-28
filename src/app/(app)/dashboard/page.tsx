@@ -7,18 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuickEventButtons } from "@/components/quick-event-buttons";
+import { formatRelativeTime } from "@/lib/date-utils";
 
-async function getDashboardData(userId: string) {
+const EVENT_LABELS: Record<string, string> = {
+  WALK:         "🦮 Sortie",
+  MEAL:         "🍽️ Repas",
+  PEE:          "💧 Pipi",
+  POOP:         "💩 Caca",
+  MED:          "💊 Soin",
+  BATH:         "🛁 Bain",
+  LITTER:       "🪣 Litière",
+  PLAY:         "🎾 Jeu",
+  GROOM:        "✂️ Toilettage",
+  WATER_CHANGE: "💧 Eau",
+  TRAINING:     "🏅 Dressage",
+  OTHER:        "📝 Autre",
+};
+
+async function getDashboardData() {
   const [pets, upcomingVaccines] = await Promise.all([
     db.pet.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
-      include: {
-        events: {
-          orderBy: { occurredAt: "desc" },
-          take: 1,
-        },
-      },
     }),
     db.vaccine.findMany({
       where: {
@@ -30,14 +40,32 @@ async function getDashboardData(userId: string) {
     }),
   ]);
 
-  return { pets, upcomingVaccines };
+  // Last event per (petId, type)
+  const petIds = pets.map(p => p.id);
+  const lastEventRows = petIds.length > 0
+    ? await db.event.findMany({
+        where: { petId: { in: petIds } },
+        orderBy: { occurredAt: "desc" },
+        distinct: ["petId", "type"],
+        select: { petId: true, type: true, occurredAt: true },
+      })
+    : [];
+
+  // Build map petId → { type → ISO string }
+  const lastEventMap = new Map<string, Record<string, string>>();
+  for (const row of lastEventRows) {
+    if (!lastEventMap.has(row.petId)) lastEventMap.set(row.petId, {});
+    lastEventMap.get(row.petId)![row.type] = row.occurredAt.toISOString();
+  }
+
+  return { pets, upcomingVaccines, lastEventMap };
 }
 
 export default async function DashboardPage() {
   const session = await getSessionFromCookie();
   if (!session) redirect("/login");
 
-  const { pets, upcomingVaccines } = await getDashboardData(session.userId);
+  const { pets, upcomingVaccines, lastEventMap } = await getDashboardData();
 
   const hour = new Date().getHours();
   const greeting =
@@ -117,12 +145,18 @@ export default async function DashboardPage() {
       {pets.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {pets.map((pet) => {
-            const lastEvent = pet.events[0];
+            const lastEvents = lastEventMap.get(pet.id) ?? {};
+            // Most recent event for the "recap" line
+            const latestType = Object.entries(lastEvents).sort(
+              (a, b) => new Date(b[1]).getTime() - new Date(a[1]).getTime()
+            )[0];
+
             return (
               <Card key={pet.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {/* Clickable photo → pet detail */}
+                    <Link href={`/pets/${pet.id}`} className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden hover:ring-2 hover:ring-primary transition-all">
                       {pet.photoPath ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -133,9 +167,12 @@ export default async function DashboardPage() {
                       ) : (
                         <PawPrint className="h-5 w-5 text-primary" />
                       )}
-                    </div>
+                    </Link>
                     <div className="min-w-0">
-                      <CardTitle className="text-base">{pet.name}</CardTitle>
+                      {/* Clickable name → pet detail */}
+                      <Link href={`/pets/${pet.id}`} className="hover:text-primary transition-colors">
+                        <CardTitle className="text-base">{pet.name}</CardTitle>
+                      </Link>
                       <p className="text-xs text-muted-foreground capitalize">
                         {pet.species}{pet.breed ? ` · ${pet.breed}` : ""}
                       </p>
@@ -143,18 +180,23 @@ export default async function DashboardPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {lastEvent ? (
+                  {latestType ? (
                     <p className="text-xs text-muted-foreground">
                       Dernière activité :{" "}
                       <span className="font-medium text-foreground">
-                        {EVENT_LABELS[lastEvent.type]}
+                        {EVENT_LABELS[latestType[0]] ?? latestType[0]}
                       </span>{" "}
-                      {formatRelativeTime(lastEvent.occurredAt)}
+                      {formatRelativeTime(latestType[1])}
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">Aucune activité enregistrée</p>
                   )}
-                  <QuickEventButtons petId={pet.id} petName={pet.name} species={pet.species} />
+                  <QuickEventButtons
+                    petId={pet.id}
+                    petName={pet.name}
+                    species={pet.species}
+                    lastEvents={lastEvents}
+                  />
                 </CardContent>
               </Card>
             );
@@ -163,30 +205,4 @@ export default async function DashboardPage() {
       )}
     </div>
   );
-}
-
-const EVENT_LABELS: Record<string, string> = {
-  WALK:         "🦮 Sortie",
-  MEAL:         "🍽️ Repas",
-  PEE:          "💧 Pipi",
-  POOP:         "💩 Caca",
-  MED:          "💊 Soin",
-  BATH:         "🛁 Bain",
-  LITTER:       "🪣 Litière",
-  PLAY:         "🎾 Jeu",
-  GROOM:        "✂️ Toilettage",
-  WATER_CHANGE: "💧 Eau",
-  TRAINING:     "🏅 Dressage",
-  OTHER:        "📝 Autre",
-};
-
-function formatRelativeTime(date: Date) {
-  const diff = Date.now() - new Date(date).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "à l'instant";
-  if (minutes < 60) return `il y a ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `il y a ${hours}h`;
-  const days = Math.floor(hours / 24);
-  return `il y a ${days}j`;
 }

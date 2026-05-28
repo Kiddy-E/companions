@@ -1,0 +1,8 @@
+# Override for production: pull pre-built image from GHCR instead of building locally
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+services:
+  app:
+    build: !reset null
+    image: ghcr.io/kiddy-e/companions:latest

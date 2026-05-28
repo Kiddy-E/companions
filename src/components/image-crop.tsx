@@ -166,6 +166,8 @@ export function ImageCrop({ src, outputSize = 512, onCrop, onCancel }: Props) {
             height: effH,
             left:   imgLeft,
             top:    imgTop,
+            maxWidth:  "none",  // Override Tailwind preflight max-width: 100%
+            maxHeight: "none",
             pointerEvents: "none",
           }}
         />
