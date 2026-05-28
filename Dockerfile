@@ -15,6 +15,13 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 RUN npx prisma generate
+
+# Dummy build-time env vars — Next.js imports server modules during build,
+# real values are injected at runtime via docker-compose env
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
+ENV SESSION_SECRET="build-time-placeholder-secret-min-32-chars!!"
+ENV UPLOAD_DIR="./data/uploads"
+ENV NEXT_PUBLIC_APP_URL="http://localhost:3000"
 RUN npm run build
 
 # Stage 3: runner
