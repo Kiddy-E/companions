@@ -19,6 +19,11 @@ enum EventType {
   POOP
   MED
   BATH
+  LITTER
+  PLAY
+  GROOM
+  WATER_CHANGE
+  TRAINING
   OTHER
 }
 

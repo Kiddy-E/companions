@@ -10,8 +10,13 @@ import { cn } from "@/lib/utils";
 const EVENT_TYPE_OPTIONS = [
   { value: "WALK", label: "🦮 Sortie" },
   { value: "MEAL", label: "🍽️ Repas" },
+  { value: "LITTER", label: "🪣 Litière" },
   { value: "PEE", label: "💧 Pipi" },
   { value: "POOP", label: "💩 Caca" },
+  { value: "PLAY", label: "🎾 Jeu" },
+  { value: "GROOM", label: "✂️ Toilettage" },
+  { value: "TRAINING", label: "🏅 Dressage" },
+  { value: "WATER_CHANGE", label: "💧 Eau" },
   { value: "MED", label: "💊 Soin" },
   { value: "BATH", label: "🛁 Bain" },
   { value: "OTHER", label: "📝 Autre" },
@@ -24,10 +29,11 @@ const EXERTION = [
   { value: 3, label: "Intense", emoji: "🔥" },
 ] as const;
 
-interface WalkMeta {
+interface EventMeta {
   hasPee?: boolean;
   hasPoop?: boolean;
   exertion?: number;
+  cleaned?: boolean;
 }
 
 export interface EventRecord {
@@ -56,13 +62,14 @@ interface Props {
 }
 
 export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: Props) {
-  const meta = (event.metadata as WalkMeta) ?? {};
+  const meta = (event.metadata as EventMeta) ?? {};
 
   const [type, setType] = useState(event.type);
   const [duration, setDuration] = useState(event.durationMin ?? 15);
   const [hasPee, setHasPee] = useState(meta.hasPee ?? false);
   const [hasPoop, setHasPoop] = useState(meta.hasPoop ?? false);
   const [exertion, setExertion] = useState<number | null>(meta.exertion ?? null);
+  const [cleaned, setCleaned] = useState(meta.cleaned ?? false);
   const [note, setNote] = useState(event.note ?? "");
   const [occurredAt, setOccurredAt] = useState(() => toDatetimeLocal(event.occurredAt));
   const [loading, setLoading] = useState(false);
@@ -72,18 +79,21 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
   async function save() {
     setLoading(true);
     try {
-      const isWalk = type === "WALK";
+      const buildMeta = () => {
+        if (type === "WALK") return { hasPee, hasPoop, ...(exertion !== null ? { exertion } : {}) };
+        if (type === "LITTER") return { hasPee, hasPoop, cleaned };
+        return null;
+      };
+
       const res = await fetch(`/api/events/${event.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type,
           occurredAt: new Date(occurredAt).toISOString(),
-          durationMin: isWalk && duration > 0 ? duration : null,
+          durationMin: type === "WALK" && duration > 0 ? duration : null,
           note: note.trim() || null,
-          metadata: isWalk
-            ? { hasPee, hasPoop, ...(exertion !== null ? { exertion } : {}) }
-            : null,
+          metadata: buildMeta(),
         }),
       });
       if (res.ok) {
@@ -97,10 +107,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
   }
 
   async function handleDelete() {
-    if (!confirmDelete) {
-      setConfirmDelete(true);
-      return;
-    }
+    if (!confirmDelete) { setConfirmDelete(true); return; }
     setDeleting(true);
     try {
       await fetch(`/api/events/${event.id}`, { method: "DELETE" });
@@ -111,6 +118,29 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
     }
   }
 
+  const ToggleButton = ({ active, onClick, children, color }: {
+    active: boolean; onClick: () => void; children: React.ReactNode;
+    color?: "blue" | "amber" | "green";
+  }) => {
+    const colors = {
+      blue:  "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-950/40 dark:border-blue-700 dark:text-blue-300",
+      amber: "bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/40 dark:border-amber-700 dark:text-amber-300",
+      green: "bg-green-50 border-green-300 text-green-700 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300",
+    };
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all",
+          active ? (colors[color ?? "blue"]) : "border-border text-muted-foreground hover:bg-muted"
+        )}
+      >
+        {children}
+      </button>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) setConfirmDelete(false); onOpenChange(v); }}>
       <DialogContent>
@@ -119,7 +149,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Type */}
+          {/* Type selector */}
           <div className="space-y-1.5">
             <Label>Type</Label>
             <div className="grid grid-cols-4 gap-1">
@@ -141,76 +171,69 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
             </div>
           </div>
 
-          {/* Walk-specific */}
+          {/* Walk: duration */}
           {type === "WALK" && (
-            <>
-              <div className="space-y-1.5">
-                <Label>Durée</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={600}
-                    value={duration}
-                    onChange={e => setDuration(Math.max(1, Number(e.target.value)))}
-                    className="w-24"
-                  />
-                  <span className="text-sm text-muted-foreground">minutes</span>
-                </div>
+            <div className="space-y-1.5">
+              <Label>Durée</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  max={600}
+                  value={duration}
+                  onChange={e => setDuration(Math.max(1, Number(e.target.value)))}
+                  className="w-24"
+                />
+                <span className="text-sm text-muted-foreground">minutes</span>
               </div>
+            </div>
+          )}
 
-              <div className="space-y-1.5">
-                <Label>Besoins effectués</Label>
-                <div className="flex gap-2">
+          {/* Walk + Litter: pee/poop */}
+          {(type === "WALK" || type === "LITTER") && (
+            <div className="space-y-1.5">
+              <Label>Besoins</Label>
+              <div className="flex gap-2">
+                <ToggleButton active={hasPee} onClick={() => setHasPee(!hasPee)} color="blue">
+                  💧 Pipi
+                </ToggleButton>
+                <ToggleButton active={hasPoop} onClick={() => setHasPoop(!hasPoop)} color="amber">
+                  💩 Caca
+                </ToggleButton>
+              </div>
+            </div>
+          )}
+
+          {/* Walk: exertion */}
+          {type === "WALK" && (
+            <div className="space-y-1.5">
+              <Label>Dépense physique</Label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {EXERTION.map(({ value, label, emoji }) => (
                   <button
+                    key={value}
                     type="button"
-                    onClick={() => setHasPee(!hasPee)}
+                    onClick={() => setExertion(exertion === value ? null : value)}
                     className={cn(
-                      "flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all",
-                      hasPee
-                        ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-950/40 dark:border-blue-700 dark:text-blue-300"
+                      "flex flex-col items-center py-2 rounded-xl border text-xs font-medium transition-all gap-1",
+                      exertion === value
+                        ? "bg-primary/10 border-primary text-primary"
                         : "border-border text-muted-foreground hover:bg-muted"
                     )}
                   >
-                    💧 Pipi
+                    <span className="text-lg leading-none">{emoji}</span>
+                    {label}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setHasPoop(!hasPoop)}
-                    className={cn(
-                      "flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all",
-                      hasPoop
-                        ? "bg-amber-50 border-amber-300 text-amber-700 dark:bg-amber-950/40 dark:border-amber-700 dark:text-amber-300"
-                        : "border-border text-muted-foreground hover:bg-muted"
-                    )}
-                  >
-                    💩 Caca
-                  </button>
-                </div>
+                ))}
               </div>
+            </div>
+          )}
 
-              <div className="space-y-1.5">
-                <Label>Dépense physique</Label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {EXERTION.map(({ value, label, emoji }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setExertion(exertion === value ? null : value)}
-                      className={cn(
-                        "flex flex-col items-center py-2 rounded-xl border text-xs font-medium transition-all gap-1",
-                        exertion === value
-                          ? "bg-primary/10 border-primary text-primary"
-                          : "border-border text-muted-foreground hover:bg-muted"
-                      )}
-                    >
-                      <span className="text-lg leading-none">{emoji}</span>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
+          {/* Litter: cleaned */}
+          {type === "LITTER" && (
+            <ToggleButton active={cleaned} onClick={() => setCleaned(!cleaned)} color="green">
+              {cleaned ? "✅" : "○"} Litière nettoyée
+            </ToggleButton>
           )}
 
           {/* Date/time */}

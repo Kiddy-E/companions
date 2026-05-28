@@ -9,13 +9,18 @@ import { Separator } from "@/components/ui/separator";
 import { EditEventModal, type EventRecord } from "@/components/edit-event-modal";
 
 const EVENT_META: Record<string, { emoji: string; label: string }> = {
-  WALK:  { emoji: "🦮", label: "Sortie" },
-  MEAL:  { emoji: "🍽️", label: "Repas" },
-  PEE:   { emoji: "💧", label: "Pipi" },
-  POOP:  { emoji: "💩", label: "Caca" },
-  MED:   { emoji: "💊", label: "Soin" },
-  BATH:  { emoji: "🛁", label: "Bain" },
-  OTHER: { emoji: "📝", label: "Autre" },
+  WALK:         { emoji: "🦮", label: "Sortie" },
+  MEAL:         { emoji: "🍽️", label: "Repas" },
+  PEE:          { emoji: "💧", label: "Pipi" },
+  POOP:         { emoji: "💩", label: "Caca" },
+  MED:          { emoji: "💊", label: "Soin" },
+  BATH:         { emoji: "🛁", label: "Bain" },
+  LITTER:       { emoji: "🪣", label: "Litière" },
+  PLAY:         { emoji: "🎾", label: "Jeu" },
+  GROOM:        { emoji: "✂️", label: "Toilettage" },
+  WATER_CHANGE: { emoji: "💧", label: "Eau" },
+  TRAINING:     { emoji: "🏅", label: "Dressage" },
+  OTHER:        { emoji: "📝", label: "Autre" },
 };
 
 const EXERTION_LABELS: Record<number, string> = { 0: "🛋️ Repos", 1: "🚶 Balade", 2: "🏃 Actif", 3: "🔥 Intense" };
@@ -26,12 +31,34 @@ interface WalkMeta {
   exertion?: number;
 }
 
+interface LitterMeta {
+  hasPee?: boolean;
+  hasPoop?: boolean;
+  cleaned?: boolean;
+}
+
 function WalkDetails({ metadata }: { metadata: unknown }) {
   const meta = (metadata as WalkMeta) ?? {};
   const tags: string[] = [];
   if (meta.hasPee) tags.push("💧");
   if (meta.hasPoop) tags.push("💩");
   if (meta.exertion !== undefined) tags.push(EXERTION_LABELS[meta.exertion] ?? "");
+  if (tags.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {tags.map((t, i) => (
+        <span key={i} className="text-xs bg-muted px-1.5 py-0.5 rounded-md">{t}</span>
+      ))}
+    </div>
+  );
+}
+
+function LitterDetails({ metadata }: { metadata: unknown }) {
+  const meta = (metadata as LitterMeta) ?? {};
+  const tags: string[] = [];
+  if (meta.hasPee) tags.push("💧 Pipi");
+  if (meta.hasPoop) tags.push("💩 Caca");
+  if (meta.cleaned) tags.push("✅ Nettoyée");
   if (tags.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1 mt-1">
@@ -107,6 +134,9 @@ export function JournalList({ events: initialEvents, currentUserId, isAdmin }: P
                           </div>
                           {event.type === "WALK" && event.metadata != null && (
                             <WalkDetails metadata={event.metadata} />
+                          )}
+                          {event.type === "LITTER" && event.metadata != null && (
+                            <LitterDetails metadata={event.metadata} />
                           )}
                           <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-xs text-muted-foreground">

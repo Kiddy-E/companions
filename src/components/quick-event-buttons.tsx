@@ -1,73 +1,99 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { WalkModal } from "@/components/walk-modal";
+import { LitterModal } from "@/components/litter-modal";
+import { QuickEventModal } from "@/components/quick-event-modal";
+import { getSpeciesProfile, SPECIES_QUICK_ACTIONS, EVENT_LABEL_MAP } from "@/lib/species-profiles";
 
 interface Props {
   petId: string;
   petName: string;
+  species: string;
 }
 
-const QUICK_EVENTS = [
-  { type: "MEAL", label: "🍽️ Repas" },
-  { type: "PEE", label: "💧 Pipi" },
-  { type: "POOP", label: "💩 Caca" },
-  { type: "BATH", label: "🛁 Bain" },
-] as const;
+type ModalState =
+  | { type: "walk" }
+  | { type: "litter" }
+  | { type: "generic"; eventType: string }
+  | null;
 
-export function QuickEventButtons({ petId, petName }: Props) {
-  const router = useRouter();
-  const [loading, setLoading] = useState<string | null>(null);
-  const [walkOpen, setWalkOpen] = useState(false);
+export function QuickEventButtons({ petId, petName, species }: Props) {
+  const [modal, setModal] = useState<ModalState>(null);
 
-  async function logEvent(type: string) {
-    setLoading(type);
-    try {
-      await fetch("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ petId, type }),
-      });
-      router.refresh();
-    } finally {
-      setLoading(null);
-    }
+  const profile = getSpeciesProfile(species);
+  const actions = SPECIES_QUICK_ACTIONS[profile];
+
+  // WALK and LITTER are full-width (first slot), others are 2-column grid
+  const isFullWidth = (t: string) => t === "WALK" || t === "LITTER";
+  const fullWidthActions = actions.filter(isFullWidth);
+  const gridActions = actions.filter(t => !isFullWidth(t));
+
+  function handleClick(type: string) {
+    if (type === "WALK") return setModal({ type: "walk" });
+    if (type === "LITTER") return setModal({ type: "litter" });
+    setModal({ type: "generic", eventType: type });
   }
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-1.5">
-        {/* Walk opens modal */}
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs h-8 px-2 justify-start col-span-2"
-          onClick={() => setWalkOpen(true)}
-        >
-          🦮 Sortie
-        </Button>
-        {QUICK_EVENTS.map(({ type, label }) => (
-          <Button
-            key={type}
-            variant="outline"
-            size="sm"
-            className="text-xs h-8 px-2 justify-start"
-            disabled={loading === type}
-            onClick={() => logEvent(type)}
-          >
-            {loading === type ? "..." : label}
-          </Button>
-        ))}
+      <div className="space-y-1.5">
+        {/* Full-width buttons (WALK / LITTER) */}
+        {fullWidthActions.map(type => {
+          const { emoji, label } = EVENT_LABEL_MAP[type] ?? { emoji: "📝", label: type };
+          return (
+            <Button
+              key={type}
+              variant="outline"
+              size="sm"
+              className="w-full text-xs h-8 px-2 justify-start"
+              onClick={() => handleClick(type)}
+            >
+              {emoji} {label}
+            </Button>
+          );
+        })}
+        {/* 2-col grid */}
+        <div className="grid grid-cols-2 gap-1.5">
+          {gridActions.map(type => {
+            const { emoji, label } = EVENT_LABEL_MAP[type] ?? { emoji: "📝", label: type };
+            return (
+              <Button
+                key={type}
+                variant="outline"
+                size="sm"
+                className="text-xs h-8 px-2 justify-start"
+                onClick={() => handleClick(type)}
+              >
+                {emoji} {label}
+              </Button>
+            );
+          })}
+        </div>
       </div>
 
       <WalkModal
         petId={petId}
         petName={petName}
-        open={walkOpen}
-        onOpenChange={setWalkOpen}
+        open={modal?.type === "walk"}
+        onOpenChange={v => { if (!v) setModal(null); }}
       />
+      <LitterModal
+        petId={petId}
+        petName={petName}
+        open={modal?.type === "litter"}
+        onOpenChange={v => { if (!v) setModal(null); }}
+      />
+      {modal?.type === "generic" && (
+        <QuickEventModal
+          petId={petId}
+          petName={petName}
+          eventType={modal.eventType}
+          open
+          onOpenChange={v => { if (!v) setModal(null); }}
+        />
+      )}
     </>
   );
 }

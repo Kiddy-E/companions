@@ -2,7 +2,7 @@
 CREATE TYPE "Role" AS ENUM ('ADMIN', 'MEMBER');
 
 -- CreateEnum
-CREATE TYPE "EventType" AS ENUM ('WALK', 'MEAL', 'PEE', 'POOP', 'MED', 'BATH', 'OTHER');
+CREATE TYPE "EventType" AS ENUM ('WALK', 'MEAL', 'PEE', 'POOP', 'MED', 'BATH', 'LITTER', 'PLAY', 'GROOM', 'WATER_CHANGE', 'TRAINING', 'OTHER');
 
 -- CreateTable
 CREATE TABLE "User" (

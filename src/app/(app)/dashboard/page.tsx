@@ -154,7 +154,7 @@ export default async function DashboardPage() {
                   ) : (
                     <p className="text-xs text-muted-foreground">Aucune activité enregistrée</p>
                   )}
-                  <QuickEventButtons petId={pet.id} petName={pet.name} />
+                  <QuickEventButtons petId={pet.id} petName={pet.name} species={pet.species} />
                 </CardContent>
               </Card>
             );
@@ -166,13 +166,18 @@ export default async function DashboardPage() {
 }
 
 const EVENT_LABELS: Record<string, string> = {
-  WALK: "🦮 Sortie",
-  MEAL: "🍽️ Repas",
-  PEE: "💧 Pipi",
-  POOP: "💩 Caca",
-  MED: "💊 Soin",
-  BATH: "🛁 Bain",
-  OTHER: "📝 Autre",
+  WALK:         "🦮 Sortie",
+  MEAL:         "🍽️ Repas",
+  PEE:          "💧 Pipi",
+  POOP:         "💩 Caca",
+  MED:          "💊 Soin",
+  BATH:         "🛁 Bain",
+  LITTER:       "🪣 Litière",
+  PLAY:         "🎾 Jeu",
+  GROOM:        "✂️ Toilettage",
+  WATER_CHANGE: "💧 Eau",
+  TRAINING:     "🏅 Dressage",
+  OTHER:        "📝 Autre",
 };
 
 function formatRelativeTime(date: Date) {

@@ -13,13 +13,18 @@ import { differenceInYears, differenceInMonths } from "@/lib/date-utils";
 type Props = { params: Promise<{ id: string }> };
 
 const EVENT_LABELS: Record<string, string> = {
-  WALK: "🦮 Sortie",
-  MEAL: "🍽️ Repas",
-  PEE: "💧 Pipi",
-  POOP: "💩 Caca",
-  MED: "💊 Soin",
-  BATH: "🛁 Bain",
-  OTHER: "📝 Autre",
+  WALK:         "🦮 Sortie",
+  MEAL:         "🍽️ Repas",
+  PEE:          "💧 Pipi",
+  POOP:         "💩 Caca",
+  MED:          "💊 Soin",
+  BATH:         "🛁 Bain",
+  LITTER:       "🪣 Litière",
+  PLAY:         "🎾 Jeu",
+  GROOM:        "✂️ Toilettage",
+  WATER_CHANGE: "💧 Eau",
+  TRAINING:     "🏅 Dressage",
+  OTHER:        "📝 Autre",
 };
 
 export default async function PetDetailPage({ params }: Props) {
@@ -116,7 +121,7 @@ export default async function PetDetailPage({ params }: Props) {
           <CardTitle className="text-sm font-medium">Actions rapides</CardTitle>
         </CardHeader>
         <CardContent>
-          <QuickEventButtons petId={pet.id} petName={pet.name} />
+          <QuickEventButtons petId={pet.id} petName={pet.name} species={pet.species} />
         </CardContent>
       </Card>
 
