@@ -24,6 +24,7 @@ interface Props {
 export function QuickEventModal({ petId, petName, eventType, open, onOpenChange }: Props) {
   const router = useRouter();
   const { emoji, label } = EVENT_LABEL_MAP[eventType] ?? { emoji: "📝", label: eventType };
+  const isOther = eventType === "OTHER";
   const [note, setNote] = useState("");
   const [occurredAt, setOccurredAt] = useState(() => toDatetimeLocal(new Date()));
   const [loading, setLoading] = useState(false);
@@ -72,19 +73,30 @@ export function QuickEventModal({ petId, petName, eventType, open, onOpenChange 
             />
           </div>
 
-          {/* Note */}
+          {/* Note — textarea + required for OTHER */}
           <div className="space-y-1.5">
-            <Label>Note <span className="text-muted-foreground font-normal text-xs">(optionnel)</span></Label>
-            <Input
-              placeholder="Observations, quantité..."
+            <Label>
+              {isOther ? "Que s'est-il passé ?" : "Note"}
+              {!isOther && <span className="text-muted-foreground font-normal text-xs ml-1">(optionnel)</span>}
+            </Label>
+            <textarea
+              rows={isOther ? 3 : 2}
+              placeholder={isOther
+                ? "Ex : a vomi, a toussé, comportement inhabituel..."
+                : "Observations, quantité..."
+              }
               value={note}
               onChange={e => setNote(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) submit(); }}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
             />
           </div>
 
           <div className="flex gap-2 pt-1">
-            <Button className="flex-1" onClick={submit} disabled={loading}>
+            <Button
+              className="flex-1"
+              onClick={submit}
+              disabled={loading || (isOther && !note.trim())}
+            >
               {loading ? "Enregistrement..." : "Enregistrer"}
             </Button>
             <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>

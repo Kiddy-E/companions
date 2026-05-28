@@ -20,9 +20,9 @@ export function getSpeciesProfile(species: string): SpeciesProfile {
 
 // Quick action types per species profile (ordered, displayed as buttons)
 export const SPECIES_QUICK_ACTIONS: Record<SpeciesProfile, string[]> = {
-  dog:     ["WALK", "MEAL", "PEE", "POOP", "MED", "BATH", "PLAY", "TRAINING"],
-  cat:     ["LITTER", "MEAL", "PLAY", "GROOM", "MED", "BATH"],
-  rabbit:  ["LITTER", "MEAL", "PLAY", "GROOM", "MED"],
+  dog:     ["WALK", "MEAL", "PEE", "POOP", "MED", "BATH", "PLAY", "TRAINING", "OTHER"],
+  cat:     ["LITTER", "MEAL", "PLAY", "GROOM", "MED", "BATH", "OTHER"],
+  rabbit:  ["LITTER", "MEAL", "PLAY", "GROOM", "MED", "OTHER"],
   bird:    ["MEAL", "PLAY", "MED", "OTHER"],
   fish:    ["MEAL", "WATER_CHANGE", "MED", "OTHER"],
   reptile: ["MEAL", "WATER_CHANGE", "MED", "OTHER"],
