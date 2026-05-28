@@ -36,7 +36,7 @@ function rateLimitResponse(resetAt: number): NextResponse {
   );
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = getIP(req);
 
