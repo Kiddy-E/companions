@@ -21,9 +21,9 @@ vi.mock("@/lib/db", () => ({
       findUnique: vi.fn(),
       update: vi.fn(),
     },
-    pet: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
-    event: { create: vi.fn(), findMany: vi.fn() },
-    vaccine: { findMany: vi.fn() },
+    pet: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+    event: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), groupBy: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    vaccine: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
     $queryRaw: vi.fn().mockResolvedValue([]),
   },
 }));

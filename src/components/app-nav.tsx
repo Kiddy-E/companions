@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/pets", label: "Animaux", icon: PawPrint },
   { href: "/vaccines", label: "Vaccins", icon: Syringe },
+  { href: "/journal", label: "Journal", icon: BookOpen },
 ];
 
 const adminItems = [
