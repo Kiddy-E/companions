@@ -94,8 +94,10 @@ export default async function PetDetailPage({ params }: Props) {
       litterWarnings.push("♻️ Litière jamais changée");
     } else {
       const h = (now.getTime() - lastLitterChangeAt.getTime()) / 3600000;
-      if (h > settings.litterChangeHours)
-        litterWarnings.push(`♻️ Changement en retard (${Math.floor(h)}h / max ${settings.litterChangeHours}h)`);
+      if (h > settings.litterChangeHours) {
+        const days = Math.round(settings.litterChangeHours / 24);
+        litterWarnings.push(`♻️ Changement en retard (${Math.floor(h / 24)}j / max ${days}j)`);
+      }
     }
   }
   const litterWarning = litterWarnings.length > 0 ? litterWarnings.join(" · ") : null;

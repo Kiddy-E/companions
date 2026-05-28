@@ -29,8 +29,9 @@ export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
   const [litterCleanHours, setLitterCleanHours] = useState<string>(
     initialSettings.litterCleanHours ? String(initialSettings.litterCleanHours) : ""
   );
-  const [litterChangeHours, setLitterChangeHours] = useState<string>(
-    initialSettings.litterChangeHours ? String(initialSettings.litterChangeHours) : ""
+  // Stored as hours internally, displayed as days in UI
+  const [litterChangeDays, setLitterChangeDays] = useState<string>(
+    initialSettings.litterChangeHours ? String(Math.round(initialSettings.litterChangeHours / 24)) : ""
   );
   const [mealGrams, setMealGrams] = useState<string>(
     initialSettings.mealGrams ? String(initialSettings.mealGrams) : ""
@@ -58,7 +59,7 @@ export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
     try {
       const settings: PetSettings = {};
       if (litterCleanHours) settings.litterCleanHours = Number(litterCleanHours);
-      if (litterChangeHours) settings.litterChangeHours = Number(litterChangeHours);
+      if (litterChangeDays) settings.litterChangeHours = Number(litterChangeDays) * 24;
       if (mealGrams) settings.mealGrams = Number(mealGrams);
       if (meals.length > 0) settings.meals = meals;
 
@@ -113,13 +114,13 @@ export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
             <Input
               type="number"
               min={1}
-              max={720}
-              placeholder="Ex : 168"
-              value={litterChangeHours}
-              onChange={e => setLitterChangeHours(e.target.value)}
+              max={30}
+              placeholder="Ex : 7"
+              value={litterChangeDays}
+              onChange={e => setLitterChangeDays(e.target.value)}
               className="w-24"
             />
-            <span className="text-sm text-muted-foreground">heures</span>
+            <span className="text-sm text-muted-foreground">jours</span>
           </div>
           <p className="text-xs text-muted-foreground">Alerte si pas de changement complet depuis ce délai</p>
         </div>
