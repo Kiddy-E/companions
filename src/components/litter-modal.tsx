@@ -13,6 +13,8 @@ function toDatetimeLocal(d: Date) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+type LitterAction = "cleaned" | "changed" | null;
+
 interface Props {
   petId: string;
   petName: string;
@@ -24,7 +26,7 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
   const router = useRouter();
   const [hasPee, setHasPee] = useState(false);
   const [hasPoop, setHasPoop] = useState(false);
-  const [cleaned, setCleaned] = useState(false);
+  const [action, setAction] = useState<LitterAction>(null);
   const [note, setNote] = useState("");
   const [occurredAt, setOccurredAt] = useState(() => toDatetimeLocal(new Date()));
   const [loading, setLoading] = useState(false);
@@ -32,7 +34,7 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
   function reset() {
     setHasPee(false);
     setHasPoop(false);
-    setCleaned(false);
+    setAction(null);
     setNote("");
     setOccurredAt(toDatetimeLocal(new Date()));
   }
@@ -48,7 +50,7 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
           type: "LITTER",
           note: note.trim() || undefined,
           occurredAt: new Date(occurredAt).toISOString(),
-          metadata: { hasPee, hasPoop, cleaned },
+          metadata: { hasPee, hasPoop, ...(action ? { action } : {}) },
         }),
       });
       reset();
@@ -67,7 +69,7 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
         </DialogHeader>
 
         <div className="space-y-5">
-          {/* Needs */}
+          {/* Besoins */}
           <div className="space-y-1.5">
             <Label>Besoins</Label>
             <div className="flex gap-2">
@@ -98,20 +100,40 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
             </div>
           </div>
 
-          {/* Cleaned */}
-          <button
-            type="button"
-            onClick={() => setCleaned(!cleaned)}
-            className={cn(
-              "w-full py-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-2",
-              cleaned
-                ? "bg-green-50 border-green-300 text-green-700 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300 scale-[1.01]"
-                : "border-border text-muted-foreground hover:bg-muted"
-            )}
-          >
-            <span>{cleaned ? "✅" : "○"}</span>
-            Litière nettoyée
-          </button>
+          {/* Action — radio-style */}
+          <div className="space-y-1.5">
+            <Label>Entretien effectué</Label>
+            <div className="flex gap-2">
+              {(["cleaned", "changed"] as LitterAction[]).map(opt => {
+                const isSelected = action === opt;
+                const config = {
+                  cleaned: { emoji: "🧹", label: "Nettoyée", color: "green" },
+                  changed: { emoji: "♻️", label: "Changée", color: "primary" },
+                }[opt as "cleaned" | "changed"];
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setAction(isSelected ? null : opt)}
+                    className={cn(
+                      "flex-1 py-3 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-2",
+                      isSelected && opt === "cleaned"
+                        ? "bg-green-50 border-green-300 text-green-700 dark:bg-green-950/40 dark:border-green-700 dark:text-green-300 scale-[1.02]"
+                        : isSelected && opt === "changed"
+                        ? "bg-primary/10 border-primary text-primary scale-[1.02]"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <span>{config.emoji}</span>
+                    {config.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Nettoyée = enlever les crottes · Changée = litière entièrement remplacée
+            </p>
+          </div>
 
           {/* Date/time */}
           <div className="space-y-1.5">
@@ -126,20 +148,14 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
           {/* Note */}
           <div className="space-y-1.5">
             <Label>Note <span className="text-muted-foreground font-normal text-xs">(optionnel)</span></Label>
-            <Input
-              placeholder="Observations..."
-              value={note}
-              onChange={e => setNote(e.target.value)}
-            />
+            <Input placeholder="Observations..." value={note} onChange={e => setNote(e.target.value)} />
           </div>
 
           <div className="flex gap-2 pt-1">
             <Button className="flex-1" onClick={submit} disabled={loading}>
               {loading ? "Enregistrement..." : "Enregistrer"}
             </Button>
-            <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>
-              Annuler
-            </Button>
+            <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>Annuler</Button>
           </div>
         </div>
       </DialogContent>

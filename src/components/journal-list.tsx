@@ -34,7 +34,8 @@ interface WalkMeta {
 interface LitterMeta {
   hasPee?: boolean;
   hasPoop?: boolean;
-  cleaned?: boolean;
+  action?: "cleaned" | "changed";
+  cleaned?: boolean; // legacy
 }
 
 function WalkDetails({ metadata }: { metadata: unknown }) {
@@ -58,7 +59,8 @@ function LitterDetails({ metadata }: { metadata: unknown }) {
   const tags: string[] = [];
   if (meta.hasPee) tags.push("💧 Pipi");
   if (meta.hasPoop) tags.push("💩 Caca");
-  if (meta.cleaned) tags.push("✅ Nettoyée");
+  if (meta.action === "changed") tags.push("♻️ Changée");
+  else if (meta.action === "cleaned" || meta.cleaned) tags.push("🧹 Nettoyée");
   if (tags.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1 mt-1">

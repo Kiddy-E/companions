@@ -6,7 +6,8 @@ import { deletePhoto } from "@/lib/storage/upload";
 
 const mealTimeSchema = z.object({ time: z.string().regex(/^\d{2}:\d{2}$/) });
 const settingsSchema = z.object({
-  litterLifetimeHours: z.number().int().positive().optional(),
+  litterCleanHours: z.number().int().positive().optional(),
+  litterChangeHours: z.number().int().positive().optional(),
   mealGrams: z.number().int().positive().nullable().optional(),
   meals: z.array(mealTimeSchema).optional(),
 }).optional();

@@ -18,7 +18,8 @@ import { buildLastEventMap } from "@/lib/event-utils";
 type Props = { params: Promise<{ id: string }> };
 
 interface PetSettings {
-  litterLifetimeHours?: number;
+  litterCleanHours?: number;
+  litterChangeHours?: number;
   mealGrams?: number;
   meals?: { time: string }[];
 }
@@ -69,17 +70,35 @@ export default async function PetDetailPage({ params }: Props) {
   const profile = getSpeciesProfile(pet.species);
   const recapTypes = SPECIES_QUICK_ACTIONS[profile].slice(0, 6);
 
-  // Warning: litter overdue
-  const litterWarning = (() => {
-    if (!settings.litterLifetimeHours) return null;
-    const lastLitter = lastEventMap["LITTER"];
-    if (!lastLitter) return `Litière jamais nettoyée`;
-    const hoursAgo = (now.getTime() - new Date(lastLitter).getTime()) / 3600000;
-    if (hoursAgo > settings.litterLifetimeHours) {
-      return `Litière à changer (${Math.floor(hoursAgo)}h écoulées / max ${settings.litterLifetimeHours}h)`;
+  // Warning: litter — separate clean and change deadlines
+  // cleaned = action "cleaned" OR "changed"; changed = action "changed" only
+  const lastLitterCleanAt = pet.events.find(
+    e => e.type === "LITTER" && ["cleaned", "changed"].includes((e.metadata as { action?: string } | null)?.action ?? "")
+  )?.occurredAt ?? null;
+  const lastLitterChangeAt = pet.events.find(
+    e => e.type === "LITTER" && (e.metadata as { action?: string } | null)?.action === "changed"
+  )?.occurredAt ?? null;
+
+  const litterWarnings: string[] = [];
+  if (settings.litterCleanHours) {
+    if (!lastLitterCleanAt) {
+      litterWarnings.push("🧹 Litière jamais nettoyée");
+    } else {
+      const h = (now.getTime() - lastLitterCleanAt.getTime()) / 3600000;
+      if (h > settings.litterCleanHours)
+        litterWarnings.push(`🧹 Nettoyage en retard (${Math.floor(h)}h / max ${settings.litterCleanHours}h)`);
     }
-    return null;
-  })();
+  }
+  if (settings.litterChangeHours) {
+    if (!lastLitterChangeAt) {
+      litterWarnings.push("♻️ Litière jamais changée");
+    } else {
+      const h = (now.getTime() - lastLitterChangeAt.getTime()) / 3600000;
+      if (h > settings.litterChangeHours)
+        litterWarnings.push(`♻️ Changement en retard (${Math.floor(h)}h / max ${settings.litterChangeHours}h)`);
+    }
+  }
+  const litterWarning = litterWarnings.length > 0 ? litterWarnings.join(" · ") : null;
 
   // Warning: meal overdue
   const mealWarning = (() => {

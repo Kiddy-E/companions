@@ -33,8 +33,11 @@ interface EventMeta {
   hasPee?: boolean;
   hasPoop?: boolean;
   exertion?: number;
-  cleaned?: boolean;
+  action?: "cleaned" | "changed";
+  cleaned?: boolean; // legacy
 }
+
+type LitterAction = "cleaned" | "changed";
 
 export interface EventRecord {
   id: string;
@@ -69,7 +72,9 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
   const [hasPee, setHasPee] = useState(meta.hasPee ?? false);
   const [hasPoop, setHasPoop] = useState(meta.hasPoop ?? false);
   const [exertion, setExertion] = useState<number | null>(meta.exertion ?? null);
-  const [cleaned, setCleaned] = useState(meta.cleaned ?? false);
+  const [litterAction, setLitterAction] = useState<LitterAction | null>(
+    meta.action ?? (meta.cleaned ? "cleaned" : null)
+  );
   const [note, setNote] = useState(event.note ?? "");
   const [occurredAt, setOccurredAt] = useState(() => toDatetimeLocal(event.occurredAt));
   const [loading, setLoading] = useState(false);
@@ -81,7 +86,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
     try {
       const buildMeta = () => {
         if (type === "WALK") return { hasPee, hasPoop, ...(exertion !== null ? { exertion } : {}) };
-        if (type === "LITTER") return { hasPee, hasPoop, cleaned };
+        if (type === "LITTER") return { hasPee, hasPoop, ...(litterAction ? { action: litterAction } : {}) };
         return null;
       };
 
@@ -229,11 +234,23 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
             </div>
           )}
 
-          {/* Litter: cleaned */}
+          {/* Litter: action radio */}
           {type === "LITTER" && (
-            <ToggleButton active={cleaned} onClick={() => setCleaned(!cleaned)} color="green">
-              {cleaned ? "✅" : "○"} Litière nettoyée
-            </ToggleButton>
+            <div className="space-y-1.5">
+              <Label>Entretien</Label>
+              <div className="flex gap-2">
+                {(["cleaned", "changed"] as LitterAction[]).map(opt => (
+                  <ToggleButton
+                    key={opt}
+                    active={litterAction === opt}
+                    onClick={() => setLitterAction(litterAction === opt ? null : opt)}
+                    color={opt === "changed" ? "blue" : "green"}
+                  >
+                    {opt === "cleaned" ? "🧹 Nettoyée" : "♻️ Changée"}
+                  </ToggleButton>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Date/time */}

@@ -12,7 +12,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface MealTime { time: string }
 
 interface PetSettings {
-  litterLifetimeHours?: number;
+  litterCleanHours?: number;
+  litterChangeHours?: number;
   mealGrams?: number;
   meals?: MealTime[];
 }
@@ -25,8 +26,11 @@ interface Props {
 
 export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
   const router = useRouter();
-  const [litterHours, setLitterHours] = useState<string>(
-    initialSettings.litterLifetimeHours ? String(initialSettings.litterLifetimeHours) : ""
+  const [litterCleanHours, setLitterCleanHours] = useState<string>(
+    initialSettings.litterCleanHours ? String(initialSettings.litterCleanHours) : ""
+  );
+  const [litterChangeHours, setLitterChangeHours] = useState<string>(
+    initialSettings.litterChangeHours ? String(initialSettings.litterChangeHours) : ""
   );
   const [mealGrams, setMealGrams] = useState<string>(
     initialSettings.mealGrams ? String(initialSettings.mealGrams) : ""
@@ -53,7 +57,8 @@ export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
     setError(null);
     try {
       const settings: PetSettings = {};
-      if (litterHours) settings.litterLifetimeHours = Number(litterHours);
+      if (litterCleanHours) settings.litterCleanHours = Number(litterCleanHours);
+      if (litterChangeHours) settings.litterChangeHours = Number(litterChangeHours);
       if (mealGrams) settings.mealGrams = Number(mealGrams);
       if (meals.length > 0) settings.meals = meals;
 
@@ -83,22 +88,40 @@ export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
       <CardContent className="space-y-5">
         {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
-        {/* Litter lifetime */}
+        {/* Litter clean */}
         <div className="space-y-1.5">
-          <Label>Durée de vie de la litière</Label>
+          <Label>🧹 Délai avant nettoyage</Label>
           <div className="flex items-center gap-2">
             <Input
               type="number"
               min={1}
               max={168}
               placeholder="Ex : 24"
-              value={litterHours}
-              onChange={e => setLitterHours(e.target.value)}
+              value={litterCleanHours}
+              onChange={e => setLitterCleanHours(e.target.value)}
               className="w-24"
             />
             <span className="text-sm text-muted-foreground">heures</span>
           </div>
-          <p className="text-xs text-muted-foreground">Alerte si la litière n'a pas été nettoyée depuis ce délai</p>
+          <p className="text-xs text-muted-foreground">Alerte si pas de nettoyage depuis ce délai</p>
+        </div>
+
+        {/* Litter change */}
+        <div className="space-y-1.5">
+          <Label>♻️ Délai avant changement complet</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={720}
+              placeholder="Ex : 168"
+              value={litterChangeHours}
+              onChange={e => setLitterChangeHours(e.target.value)}
+              className="w-24"
+            />
+            <span className="text-sm text-muted-foreground">heures</span>
+          </div>
+          <p className="text-xs text-muted-foreground">Alerte si pas de changement complet depuis ce délai</p>
         </div>
 
         {/* Normal meal quantity */}
