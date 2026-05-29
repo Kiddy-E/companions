@@ -244,7 +244,7 @@ export default async function DashboardPage() {
                     <div className="flex items-center gap-3">
                       <Link
                         href={`/pets/${pet.id}`}
-                        className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden hover:ring-2 hover:ring-primary transition-all"
+                        className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden hover:ring-2 hover:ring-primary transition-all"
                       >
                         {pet.photoPath ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -254,14 +254,14 @@ export default async function DashboardPage() {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <PawPrint className="h-4 w-4 text-primary" />
+                          <PawPrint className="h-5 w-5 text-primary" />
                         )}
                       </Link>
                       <div className="flex-1 min-w-0">
-                        <Link href={`/pets/${pet.id}`} className="font-semibold text-sm hover:text-primary transition-colors">
+                        <Link href={`/pets/${pet.id}`} className="font-semibold text-base hover:text-primary transition-colors">
                           {pet.name}
                         </Link>
-                        <p className="text-xs text-muted-foreground capitalize">
+                        <p className="text-sm text-muted-foreground capitalize">
                           {pet.species}{pet.breed ? ` · ${pet.breed}` : ""}
                         </p>
                       </div>

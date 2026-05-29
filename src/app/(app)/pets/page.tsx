@@ -80,8 +80,8 @@ export default async function PetsPage() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
                     {/* Avatar with age badge */}
-                    <Link href={`/pets/${pet.id}`} className="relative flex-shrink-0 h-12 w-12">
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                    <Link href={`/pets/${pet.id}`} className="relative flex-shrink-0 h-14 w-14">
+                      <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
                         {pet.photoPath ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={`/api/pets/${pet.id}/photo`} alt={pet.name} className="h-full w-full object-cover" />
@@ -97,9 +97,9 @@ export default async function PetsPage() {
                     </Link>
                     <div className="min-w-0">
                       <Link href={`/pets/${pet.id}`} className="hover:text-primary transition-colors">
-                        <CardTitle className="text-base">{pet.name}</CardTitle>
+                        <CardTitle className="text-lg">{pet.name}</CardTitle>
                       </Link>
-                      <p className="text-xs text-muted-foreground capitalize">
+                      <p className="text-sm text-muted-foreground capitalize">
                         {pet.species}{pet.breed ? ` · ${pet.breed}` : ""}
                       </p>
                     </div>

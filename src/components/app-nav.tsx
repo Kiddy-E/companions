@@ -167,13 +167,7 @@ export function AppNav({ user }: { user: NavUser }) {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex h-14 items-center justify-between border-b bg-card px-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <PawPrint className="h-3.5 w-3.5" />
-          </div>
-          <span className="font-semibold">Companions</span>
-        </div>
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex h-14 items-center gap-3 border-b bg-card px-4">
         <button
           onClick={() => setMobileOpen(true)}
           className="rounded-lg p-1.5 hover:bg-muted"
@@ -181,6 +175,12 @@ export function AppNav({ user }: { user: NavUser }) {
         >
           <Menu className="h-5 w-5" />
         </button>
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <PawPrint className="h-4 w-4" />
+          </div>
+          <span className="font-semibold text-base">Companions</span>
+        </div>
       </div>
 
       {/* Mobile drawer */}
