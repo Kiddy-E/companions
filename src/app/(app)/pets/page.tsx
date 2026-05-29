@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QuickEventButtons } from "@/components/quick-event-buttons";
 import { buildLastEventMap } from "@/lib/event-utils";
-import { formatRelativeTime, differenceInYears, differenceInMonths } from "@/lib/date-utils";
-import { EVENT_LABEL_MAP } from "@/lib/species-profiles";
+import { differenceInYears, differenceInMonths } from "@/lib/date-utils";
+import { RelativeTime } from "@/components/relative-time";
+import { EVENT_LABEL_MAP, getSpeciesProfile } from "@/lib/species-profiles";
 
 export default async function PetsPage() {
   const session = await getSessionFromCookie();
@@ -31,13 +32,16 @@ export default async function PetsPage() {
 
   const lastEventMap = buildLastEventMap(lastEventRows);
 
+  const speciesOrder = ["dog", "cat", "rabbit", "bird", "fish", "reptile", "other"];
+  pets.sort((a, b) => speciesOrder.indexOf(getSpeciesProfile(a.species)) - speciesOrder.indexOf(getSpeciesProfile(b.species)));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Animaux</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            {pets.length === 0 ? "Aucun animal" : `${pets.length} animal${pets.length > 1 ? "x" : ""}`}
+            {pets.length === 0 ? "Aucun animal" : `${pets.length} ${pets.length > 1 ? "animaux" : "animal"}`}
           </p>
         </div>
         <Button asChild size="sm">
@@ -108,7 +112,7 @@ export default async function PetsPage() {
                       <span className="font-medium text-foreground">
                         {EVENT_LABEL_MAP[latestEntry[0]]?.emoji}{" "}{EVENT_LABEL_MAP[latestEntry[0]]?.label ?? latestEntry[0]}
                       </span>{" "}
-                      {formatRelativeTime(latestEntry[1])}
+                      <RelativeTime date={latestEntry[1]} />
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground">Aucune activité enregistrée</p>

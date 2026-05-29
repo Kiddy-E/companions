@@ -14,6 +14,7 @@ import { getSessionFromCookie } from "@/lib/auth/session";
 import { Role } from "@/generated/prisma";
 import { EVENT_LABEL_MAP, getSpeciesProfile, SPECIES_QUICK_ACTIONS } from "@/lib/species-profiles";
 import { buildLastEventMap } from "@/lib/event-utils";
+import { checkMealWarnings, formatMealWarnings } from "@/lib/meal-warnings";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -21,7 +22,7 @@ interface PetSettings {
   litterCleanHours?: number;
   litterChangeHours?: number;
   mealGrams?: number;
-  meals?: { time: string }[];
+  meals?: { time: string; grams?: number }[];
 }
 
 interface TrainingMeta {
@@ -105,16 +106,14 @@ export default async function PetDetailPage({ params }: Props) {
   }
   const litterWarning = litterWarnings.length > 0 ? litterWarnings.join(" · ") : null;
 
-  // Warning: meal overdue
-  const mealWarning = (() => {
-    if (!settings.meals?.length) return null;
-    const lastMeal = lastEventMap["MEAL"];
-    if (!lastMeal) return "Aucun repas enregistré aujourd'hui";
-    const gapHours = 24 / settings.meals.length;
-    const hoursAgo = (now.getTime() - new Date(lastMeal).getTime()) / 3600000;
-    if (hoursAgo > gapHours + 1) return `Repas en retard (dernier il y a ${Math.floor(hoursAgo)}h)`;
-    return null;
-  })();
+  // Warning: meal overdue — check each slot vs grams given in that window
+  const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
+  const todayMealEvents = pet.events.filter(
+    e => e.type === "MEAL" && new Date(e.occurredAt) >= todayStart
+  );
+  const mealWarning = formatMealWarnings(
+    checkMealWarnings(settings.meals ?? [], settings.mealGrams, todayMealEvents, now)
+  );
 
   // Training skills: latest progress per skill name
   const skillMap = new Map<string, { progress: number; stars?: number; lastDate: string }>();

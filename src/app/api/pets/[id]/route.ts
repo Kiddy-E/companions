@@ -4,7 +4,10 @@ import { db } from "@/lib/db";
 import { getAuthContext, requireScope, errorResponse, ApiError } from "@/lib/auth/guard";
 import { deletePhoto } from "@/lib/storage/upload";
 
-const mealTimeSchema = z.object({ time: z.string().regex(/^\d{2}:\d{2}$/) });
+const mealTimeSchema = z.object({
+  time: z.string().regex(/^\d{2}:\d{2}$/),
+  grams: z.number().int().positive().optional(),
+});
 const settingsSchema = z.object({
   litterCleanHours: z.number().int().positive().optional(),
   litterChangeHours: z.number().int().positive().optional(),

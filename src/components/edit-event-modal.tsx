@@ -35,6 +35,7 @@ interface EventMeta {
   exertion?: number;
   action?: "cleaned" | "changed";
   cleaned?: boolean; // legacy
+  grams?: number;
 }
 
 type LitterAction = "cleaned" | "changed";
@@ -75,6 +76,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
   const [litterAction, setLitterAction] = useState<LitterAction | null>(
     meta.action ?? (meta.cleaned ? "cleaned" : null)
   );
+  const [grams, setGrams] = useState<string>(meta.grams ? String(meta.grams) : "");
   const [note, setNote] = useState(event.note ?? "");
   const [occurredAt, setOccurredAt] = useState(() => toDatetimeLocal(event.occurredAt));
   const [loading, setLoading] = useState(false);
@@ -87,6 +89,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
       const buildMeta = () => {
         if (type === "WALK") return { hasPee, hasPoop, ...(exertion !== null ? { exertion } : {}) };
         if (type === "LITTER") return { hasPee, hasPoop, ...(litterAction ? { action: litterAction } : {}) };
+        if (type === "MEAL") { const g = grams ? Number(grams) : undefined; return g ? { grams: g } : null; }
         return null;
       };
 
@@ -175,6 +178,25 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
               ))}
             </div>
           </div>
+
+          {/* Meal: grams */}
+          {type === "MEAL" && (
+            <div className="space-y-1.5">
+              <Label>Quantité <span className="text-muted-foreground font-normal text-xs">(optionnel)</span></Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  max={5000}
+                  placeholder="Ex : 200"
+                  value={grams}
+                  onChange={e => setGrams(e.target.value)}
+                  className="w-28"
+                />
+                <span className="text-sm text-muted-foreground">grammes</span>
+              </div>
+            </div>
+          )}
 
           {/* Walk: duration */}
           {type === "WALK" && (

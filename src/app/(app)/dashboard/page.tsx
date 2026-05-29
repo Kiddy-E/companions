@@ -2,125 +2,211 @@ import { getSessionFromCookie } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { PawPrint, Plus, AlertCircle } from "lucide-react";
+import { PawPrint, Plus, AlertTriangle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuickEventButtons } from "@/components/quick-event-buttons";
-import { formatRelativeTime } from "@/lib/date-utils";
+import { DashboardTimeline } from "@/components/dashboard-timeline";
 import { buildLastEventMap } from "@/lib/event-utils";
+import { getSpeciesProfile } from "@/lib/species-profiles";
+import { EVENT_LABEL_MAP } from "@/lib/species-profiles";
+import { checkMealWarnings, formatMealWarnings } from "@/lib/meal-warnings";
 
-const EVENT_LABELS: Record<string, string> = {
-  WALK:         "🦮 Sortie",
-  MEAL:         "🍽️ Repas",
-  PEE:          "💧 Pipi",
-  POOP:         "💩 Caca",
-  MED:          "💊 Soin",
-  BATH:         "🛁 Bain",
-  LITTER:       "🪣 Litière",
-  PLAY:         "🎾 Jeu",
-  GROOM:        "✂️ Toilettage",
-  WATER_CHANGE: "💧 Eau",
-  TRAINING:     "🏅 Dressage",
-  OTHER:        "📝 Autre",
+interface PetSettings {
+  litterCleanHours?: number;
+  litterChangeHours?: number;
+  mealGrams?: number;
+  meals?: { time: string; grams?: number }[];
+}
+
+// Status icons shown per species in the "today" row
+const SPECIES_STATUS_TYPES: Record<string, string[]> = {
+  dog:     ["WALK", "MEAL", "PEE", "POOP"],
+  cat:     ["MEAL", "LITTER"],
+  rabbit:  ["MEAL", "LITTER"],
+  bird:    ["MEAL", "WATER_CHANGE"],
+  fish:    ["MEAL", "WATER_CHANGE"],
+  reptile: ["MEAL"],
+  other:   ["MEAL"],
 };
 
 async function getDashboardData() {
-  const [pets, upcomingVaccines] = await Promise.all([
-    db.pet.findMany({
-      where: { active: true },
-      orderBy: { name: "asc" },
-    }),
-    db.vaccine.findMany({
-      where: {
-        dueAt: { lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
-      },
-      include: { pet: { select: { name: true } } },
-      orderBy: { dueAt: "asc" },
-      take: 5,
-    }),
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+
+  const pets = await db.pet.findMany({
+    where: { active: true },
+    orderBy: { name: "asc" },
+  });
+
+  const speciesOrder = ["dog", "cat", "rabbit", "bird", "fish", "reptile", "other"];
+  pets.sort(
+    (a, b) =>
+      speciesOrder.indexOf(getSpeciesProfile(a.species)) -
+      speciesOrder.indexOf(getSpeciesProfile(b.species))
+  );
+
+  const petIds = pets.map((p) => p.id);
+
+  const [todayEvents, recentEvents] = await Promise.all([
+    petIds.length > 0
+      ? db.event.findMany({
+          where: { petId: { in: petIds }, occurredAt: { gte: todayStart } },
+          orderBy: { occurredAt: "desc" },
+          include: {
+            user: { select: { id: true, username: true } },
+            pet: { select: { id: true, name: true, species: true } },
+          },
+        })
+      : Promise.resolve([]),
+    petIds.length > 0
+      ? db.event.findMany({
+          where: { petId: { in: petIds } },
+          orderBy: { occurredAt: "desc" },
+          select: { petId: true, type: true, occurredAt: true, metadata: true },
+          take: 500,
+        })
+      : Promise.resolve([]),
   ]);
 
-  // Last event per (petId, type) — include metadata to extract pee/poop from walks
-  const petIds = pets.map(p => p.id);
-  const lastEventRows = petIds.length > 0
-    ? await db.event.findMany({
-        where: { petId: { in: petIds } },
-        orderBy: { occurredAt: "desc" },
-        select: { petId: true, type: true, occurredAt: true, metadata: true },
-        take: 500, // cap to avoid pulling entire history
-      })
-    : [];
+  const lastEventMap = buildLastEventMap(recentEvents);
 
-  const lastEventMap = buildLastEventMap(lastEventRows);
+  // Today's event counts per (petId, type) — extract pee/poop from walk/litter metadata
+  const todayCountMap = new Map<string, Map<string, number>>();
+  for (const e of todayEvents) {
+    if (!todayCountMap.has(e.petId)) todayCountMap.set(e.petId, new Map());
+    const m = todayCountMap.get(e.petId)!;
+    m.set(e.type, (m.get(e.type) ?? 0) + 1);
+    const meta = e.metadata as { hasPee?: boolean; hasPoop?: boolean } | null;
+    if (meta?.hasPee) m.set("PEE", (m.get("PEE") ?? 0) + 1);
+    if (meta?.hasPoop) m.set("POOP", (m.get("POOP") ?? 0) + 1);
+  }
 
-  return { pets, upcomingVaccines, lastEventMap };
+  // Warnings per pet
+  type Warning = { petId: string; petName: string; message: string; level: "urgent" | "warn" };
+  const warnings: Warning[] = [];
+
+  for (const pet of pets) {
+    const settings = (pet.settings as PetSettings) ?? {};
+    const petLastEvents = lastEventMap.get(pet.id) ?? {};
+
+    // Meal warning — check each slot vs grams given in that window
+    if (settings.meals?.length) {
+      const petMealsToday = todayEvents.filter(e => e.petId === pet.id && e.type === "MEAL");
+      const mealMsg = formatMealWarnings(
+        checkMealWarnings(settings.meals, settings.mealGrams, petMealsToday, now)
+      );
+      if (mealMsg)
+        warnings.push({ petId: pet.id, petName: pet.name, message: mealMsg, level: "urgent" });
+    }
+
+    // Litter clean warning
+    if (settings.litterCleanHours) {
+      const recentLitter = recentEvents
+        .filter((e) => e.petId === pet.id && e.type === "LITTER")
+        .find((e) => {
+          const meta = e.metadata as { action?: string; cleaned?: boolean } | null;
+          return meta?.action === "cleaned" || meta?.action === "changed" || meta?.cleaned === true;
+        });
+      if (!recentLitter) {
+        warnings.push({ petId: pet.id, petName: pet.name, message: "Litière jamais nettoyée", level: "warn" });
+      } else {
+        const h = (now.getTime() - recentLitter.occurredAt.getTime()) / 3600000;
+        if (h > settings.litterCleanHours)
+          warnings.push({ petId: pet.id, petName: pet.name, message: `Litière à nettoyer (${Math.floor(h)}h)`, level: "warn" });
+      }
+    }
+
+    // Litter change warning
+    if (settings.litterChangeHours) {
+      const lastChange = recentEvents
+        .filter((e) => e.petId === pet.id && e.type === "LITTER")
+        .find((e) => (e.metadata as { action?: string } | null)?.action === "changed");
+      if (!lastChange) {
+        warnings.push({ petId: pet.id, petName: pet.name, message: "Litière jamais changée", level: "warn" });
+      } else {
+        const h = (now.getTime() - lastChange.occurredAt.getTime()) / 3600000;
+        if (h > settings.litterChangeHours) {
+          const days = Math.round(settings.litterChangeHours / 24);
+          warnings.push({ petId: pet.id, petName: pet.name, message: `Litière à changer (${Math.floor(h / 24)}j / max ${days}j)`, level: "warn" });
+        }
+      }
+    }
+  }
+
+  return { pets, todayEvents, todayCountMap, lastEventMap, warnings };
 }
 
 export default async function DashboardPage() {
   const session = await getSessionFromCookie();
   if (!session) redirect("/login");
 
-  const { pets, upcomingVaccines, lastEventMap } = await getDashboardData();
+  const { pets, todayEvents, todayCountMap, lastEventMap, warnings } =
+    await getDashboardData();
 
-  const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+  const dateLabel = now.toLocaleDateString("fr-FR", {
+    weekday: "long", day: "numeric", month: "long",
+  });
+
+  const urgentWarnings = warnings.filter((w) => w.level === "urgent");
+  const softWarnings = warnings.filter((w) => w.level === "warn");
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             {greeting}, {session.user.username} 👋
           </h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            {pets.length === 0
-              ? "Ajoutez votre premier animal pour commencer"
-              : `${pets.length} animal${pets.length > 1 ? "x" : ""} suivi${pets.length > 1 ? "s" : ""}`}
-          </p>
+          <p className="text-muted-foreground text-sm mt-0.5 capitalize">{dateLabel}</p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/pets/new">
-            <Plus className="h-4 w-4 mr-1.5" />
-            Ajouter
-          </Link>
-        </Button>
+        {pets.length > 0 && (
+          <Button asChild size="sm" className="flex-shrink-0">
+            <Link href="/pets/new">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Ajouter
+            </Link>
+          </Button>
+        )}
       </div>
 
-      {/* Upcoming vaccine alerts */}
-      {upcomingVaccines.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2 text-amber-800 dark:text-amber-200">
-              <AlertCircle className="h-4 w-4" />
-              Rappels vaccins à venir
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1.5">
-            {upcomingVaccines.map((v) => (
-              <div key={v.id} className="flex items-center justify-between text-sm">
-                <span className="text-amber-900 dark:text-amber-100">
-                  <span className="font-medium">{v.pet.name}</span> — {v.name}
-                </span>
-                <Badge
-                  variant="outline"
-                  className="text-xs border-amber-300 text-amber-800 dark:text-amber-200"
-                >
-                  {v.dueAt
-                    ? new Date(v.dueAt).toLocaleDateString("fr-FR", {
-                        day: "numeric",
-                        month: "short",
-                      })
-                    : "—"}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+      {/* Urgent alerts */}
+      {urgentWarnings.length > 0 && (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-3 space-y-1.5">
+          <p className="text-xs font-semibold text-destructive flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5" /> Alertes
+          </p>
+          {urgentWarnings.map((w, i) => (
+            <div key={i} className="flex items-center justify-between text-sm">
+              <span className="font-medium">{w.petName}</span>
+              <span className="text-muted-foreground text-xs">{w.message}</span>
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* No pets state */}
+      {/* Soft warnings */}
+      {softWarnings.length > 0 && (
+        <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-1.5">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5" /> À faire
+          </p>
+          {softWarnings.map((w, i) => (
+            <div key={i} className="flex items-center justify-between text-sm">
+              <span className="font-medium">{w.petName}</span>
+              <span className="text-muted-foreground text-xs">{w.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* No pets */}
       {pets.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center">
           <PawPrint className="h-12 w-12 text-muted-foreground/40 mb-4" />
@@ -137,66 +223,104 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Pet cards */}
+      {/* Per-animal status + quick actions */}
       {pets.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {pets.map((pet) => {
-            const lastEvents = lastEventMap.get(pet.id) ?? {};
-            // Most recent event for the "recap" line
-            const latestType = Object.entries(lastEvents).sort(
-              (a, b) => new Date(b[1]).getTime() - new Date(a[1]).getTime()
-            )[0];
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Aujourd&#39;hui
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {pets.map((pet) => {
+              const profile = getSpeciesProfile(pet.species);
+              const statusTypes = SPECIES_STATUS_TYPES[profile] ?? ["MEAL"];
+              const todayCounts = todayCountMap.get(pet.id) ?? new Map();
+              const lastEvents = lastEventMap.get(pet.id) ?? {};
+              const settings = (pet.settings as PetSettings) ?? {};
 
-            return (
-              <Card key={pet.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    {/* Clickable photo → pet detail */}
-                    <Link href={`/pets/${pet.id}`} className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden hover:ring-2 hover:ring-primary transition-all">
-                      {pet.photoPath ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={`/api/pets/${pet.id}/photo`}
-                          alt={pet.name}
-                          className="h-full w-full object-cover rounded-full"
-                        />
-                      ) : (
-                        <PawPrint className="h-5 w-5 text-primary" />
-                      )}
-                    </Link>
-                    <div className="min-w-0">
-                      {/* Clickable name → pet detail */}
-                      <Link href={`/pets/${pet.id}`} className="hover:text-primary transition-colors">
-                        <CardTitle className="text-base">{pet.name}</CardTitle>
+              return (
+                <Card key={pet.id} className="overflow-hidden">
+                  <CardContent className="p-4 space-y-3">
+                    {/* Animal header */}
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/pets/${pet.id}`}
+                        className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden hover:ring-2 hover:ring-primary transition-all"
+                      >
+                        {pet.photoPath ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={`/api/pets/${pet.id}/photo`}
+                            alt={pet.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <PawPrint className="h-4 w-4 text-primary" />
+                        )}
                       </Link>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {pet.species}{pet.breed ? ` · ${pet.breed}` : ""}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/pets/${pet.id}`} className="font-semibold text-sm hover:text-primary transition-colors">
+                          {pet.name}
+                        </Link>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {pet.species}{pet.breed ? ` · ${pet.breed}` : ""}
+                        </p>
+                      </div>
+                      <Link href={`/pets/${pet.id}`} className="text-muted-foreground hover:text-foreground">
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {latestType ? (
-                    <p className="text-xs text-muted-foreground">
-                      Dernière activité :{" "}
-                      <span className="font-medium text-foreground">
-                        {EVENT_LABELS[latestType[0]] ?? latestType[0]}
-                      </span>{" "}
-                      {formatRelativeTime(latestType[1])}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Aucune activité enregistrée</p>
-                  )}
-                  <QuickEventButtons
-                    petId={pet.id}
-                    petName={pet.name}
-                    species={pet.species}
-                    lastEvents={lastEvents}
-                  />
-                </CardContent>
-              </Card>
-            );
-          })}
+
+                    {/* Today status badges */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {statusTypes.map((type) => {
+                        const count = todayCounts.get(type) ?? 0;
+                        const { emoji, label } = EVENT_LABEL_MAP[type] ?? { emoji: "📝", label: type };
+                        const done = count > 0;
+                        return (
+                          <Badge
+                            key={type}
+                            variant="outline"
+                            className={`text-xs gap-1 ${
+                              done
+                                ? "border-green-300 bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800"
+                                : "border-muted text-muted-foreground"
+                            }`}
+                          >
+                            <span>{emoji}</span>
+                            <span>{done ? `${label}${count > 1 ? ` ×${count}` : ""}` : label}</span>
+                            {done && <span className="ml-0.5">✓</span>}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+
+                    {/* Quick actions */}
+                    <QuickEventButtons
+                      petId={pet.id}
+                      petName={pet.name}
+                      species={pet.species}
+                      lastEvents={lastEvents}
+                      defaultMealGrams={settings.mealGrams}
+                    />
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Today's timeline */}
+      {todayEvents.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Activités du jour
+          </h2>
+          <DashboardTimeline
+            events={todayEvents.map(e => ({ ...e, occurredAt: e.occurredAt.toISOString() }))}
+            currentUserId={session.userId}
+            isAdmin={session.user.role === "ADMIN"}
+          />
         </div>
       )}
     </div>

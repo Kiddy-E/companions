@@ -57,13 +57,12 @@ export async function deleteSession(token: string): Promise<void> {
 }
 
 export function setSessionCookie(token: string) {
-  const isProduction = env.NODE_ENV === "production";
   return {
     name: COOKIE_NAME,
     value: token,
     options: {
       httpOnly: true,
-      secure: isProduction,
+      secure: env.SECURE_COOKIES,
       sameSite: "lax" as const,
       maxAge: SESSION_TTL_DAYS * 24 * 60 * 60,
       path: "/",
@@ -77,7 +76,7 @@ export function clearSessionCookie() {
     value: "",
     options: {
       httpOnly: true,
-      secure: env.NODE_ENV === "production",
+      secure: env.SECURE_COOKIES,
       sameSite: "lax" as const,
       maxAge: 0,
       path: "/",

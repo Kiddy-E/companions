@@ -10,6 +10,10 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
+  SECURE_COOKIES: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
 });
 
 const parsed = envSchema.safeParse(process.env);

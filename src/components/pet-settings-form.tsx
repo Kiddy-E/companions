@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface MealTime { time: string }
+interface MealTime { time: string; grams?: number }
 
 interface PetSettings {
   litterCleanHours?: number;
@@ -50,7 +50,13 @@ export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
   }
 
   function updateMealTime(i: number, time: string) {
-    setMeals(prev => prev.map((m, idx) => idx === i ? { time } : m));
+    setMeals(prev => prev.map((m, idx) => idx === i ? { ...m, time } : m));
+  }
+
+  function updateMealGrams(i: number, grams: string) {
+    setMeals(prev => prev.map((m, idx) =>
+      idx === i ? { ...m, grams: grams ? Number(grams) : undefined } : m
+    ));
   }
 
   async function save() {
@@ -162,8 +168,18 @@ export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
                   type="time"
                   value={m.time}
                   onChange={e => updateMealTime(i, e.target.value)}
-                  className="w-32"
+                  className="w-28"
                 />
+                <Input
+                  type="number"
+                  min={0}
+                  max={5000}
+                  placeholder={mealGrams || "g"}
+                  value={m.grams ?? ""}
+                  onChange={e => updateMealGrams(i, e.target.value)}
+                  className="w-20"
+                />
+                <span className="text-xs text-muted-foreground">g</span>
                 <button
                   type="button"
                   onClick={() => removeMeal(i)}

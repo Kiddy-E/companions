@@ -54,6 +54,16 @@ function WalkDetails({ metadata }: { metadata: unknown }) {
   );
 }
 
+function MealDetails({ metadata }: { metadata: unknown }) {
+  const meta = (metadata as { grams?: number }) ?? {};
+  if (!meta.grams) return null;
+  return (
+    <div className="flex gap-1 mt-1">
+      <span className="text-xs bg-muted px-1.5 py-0.5 rounded-md">🍽️ {meta.grams} g</span>
+    </div>
+  );
+}
+
 function LitterDetails({ metadata }: { metadata: unknown }) {
   const meta = (metadata as LitterMeta) ?? {};
   const tags: string[] = [];
@@ -136,6 +146,9 @@ export function JournalList({ events: initialEvents, currentUserId, isAdmin }: P
                           </div>
                           {event.type === "WALK" && event.metadata != null && (
                             <WalkDetails metadata={event.metadata} />
+                          )}
+                          {event.type === "MEAL" && event.metadata != null && (
+                            <MealDetails metadata={event.metadata} />
                           )}
                           {event.type === "LITTER" && event.metadata != null && (
                             <LitterDetails metadata={event.metadata} />
