@@ -107,7 +107,11 @@ export function PetForm({ pet }: Props) {
       if (photoFile) {
         const fd = new FormData();
         fd.append("photo", photoFile, "photo.jpg");
-        await fetch(`/api/pets/${saved.id}/photo`, { method: "POST", body: fd });
+        const photoRes = await fetch(`/api/pets/${saved.id}/photo`, { method: "POST", body: fd });
+        if (!photoRes.ok) {
+          setError("La photo n'a pas pu être sauvegardée. Réessayez depuis la fiche animal.");
+          return;
+        }
       }
 
       router.push(`/pets/${saved.id}`);

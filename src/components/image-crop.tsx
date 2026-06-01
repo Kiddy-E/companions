@@ -112,19 +112,12 @@ export function ImageCrop({ src, outputSize = 512, onCrop, onCancel }: Props) {
     ctx.fillRect(0, 0, outputSize, outputSize);
     ctx.drawImage(img, clampedSrcX, clampedSrcY, clampedSrcW, clampedSrcH, dstX, dstY, dstW, dstH);
 
-    // Use synchronous dataURL to avoid toBlob null issues across browsers
     const dataURL = canvas.toDataURL("image/jpeg", 0.92);
-    fetch(dataURL)
-      .then(r => r.blob())
-      .then(blob => onCrop(blob))
-      .catch(() => {
-        // Fallback: manual dataURL → blob
-        const arr = dataURL.split(",");
-        const bStr = atob(arr[1]);
-        const u8 = new Uint8Array(bStr.length);
-        for (let i = 0; i < bStr.length; i++) u8[i] = bStr.charCodeAt(i);
-        onCrop(new Blob([u8], { type: "image/jpeg" }));
-      });
+    const arr = dataURL.split(",");
+    const bStr = atob(arr[1]);
+    const u8 = new Uint8Array(bStr.length);
+    for (let i = 0; i < bStr.length; i++) u8[i] = bStr.charCodeAt(i);
+    onCrop(new Blob([u8], { type: "image/jpeg" }));
   }, [loaded, coverScale, zoom, imgLeft, imgTop, outputSize, onCrop]);
 
   return (
