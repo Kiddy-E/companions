@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,9 @@ interface Props {
 
 export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
   const router = useRouter();
+  const t = useTranslations("litterModal");
+  const tCommon = useTranslations("common");
+  const tLitter = useTranslations("litter");
   const [hasPee, setHasPee] = useState(false);
   const [hasPoop, setHasPoop] = useState(false);
   const [action, setAction] = useState<LitterAction>(null);
@@ -65,13 +69,13 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader onClose={() => onOpenChange(false)}>
-          <DialogTitle>🪣 Litière — {petName}</DialogTitle>
+          <DialogTitle>🪣 {t("title")} — {petName}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
           {/* Besoins */}
           <div className="space-y-1.5">
-            <Label>Besoins</Label>
+            <Label>{t("needs")}</Label>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -83,7 +87,7 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
                     : "border-border text-muted-foreground hover:bg-muted"
                 )}
               >
-                💧 Pipi
+                💧 {t("pee")}
               </button>
               <button
                 type="button"
@@ -95,20 +99,20 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
                     : "border-border text-muted-foreground hover:bg-muted"
                 )}
               >
-                💩 Caca
+                💩 {t("poop")}
               </button>
             </div>
           </div>
 
           {/* Action — radio-style */}
           <div className="space-y-1.5">
-            <Label>Entretien effectué</Label>
+            <Label>{t("maintenance")}</Label>
             <div className="flex gap-2">
               {(["cleaned", "changed"] as LitterAction[]).map(opt => {
                 const isSelected = action === opt;
                 const config = {
-                  cleaned: { emoji: "🧹", label: "Nettoyée", color: "green" },
-                  changed: { emoji: "♻️", label: "Changée", color: "primary" },
+                  cleaned: { emoji: "🧹", label: tLitter("cleaned"), color: "green" },
+                  changed: { emoji: "♻️", label: tLitter("changed"), color: "primary" },
                 }[opt as "cleaned" | "changed"];
                 return (
                   <button
@@ -131,13 +135,13 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
               })}
             </div>
             <p className="text-xs text-muted-foreground">
-              Nettoyée = enlever les crottes · Changée = litière entièrement remplacée
+              {t("hint")}
             </p>
           </div>
 
           {/* Date/time */}
           <div className="space-y-1.5">
-            <Label>Date et heure</Label>
+            <Label>{tCommon("dateTime")}</Label>
             <Input
               type="datetime-local"
               value={occurredAt}
@@ -147,15 +151,15 @@ export function LitterModal({ petId, petName, open, onOpenChange }: Props) {
 
           {/* Note */}
           <div className="space-y-1.5">
-            <Label>Note <span className="text-muted-foreground font-normal text-xs">(optionnel)</span></Label>
-            <Input placeholder="Observations..." value={note} onChange={e => setNote(e.target.value)} />
+            <Label>{tCommon("note")} <span className="text-muted-foreground font-normal text-xs">{tCommon("optional")}</span></Label>
+            <Input placeholder={t("notePlaceholder")} value={note} onChange={e => setNote(e.target.value)} />
           </div>
 
           <div className="flex gap-2 pt-1">
             <Button className="flex-1" onClick={submit} disabled={loading}>
-              {loading ? "Enregistrement..." : "Enregistrer"}
+              {loading ? tCommon("saving") : tCommon("save")}
             </Button>
-            <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>Annuler</Button>
+            <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>{tCommon("cancel")}</Button>
           </div>
         </div>
       </DialogContent>

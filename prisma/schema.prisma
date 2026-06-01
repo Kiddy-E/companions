@@ -39,6 +39,7 @@ model User {
   passwordHash String
   role         Role       @default(MEMBER)
   active       Boolean    @default(true)
+  locale       String     @default("en")
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   sessions     Session[]

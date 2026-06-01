@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,8 @@ interface Props {
 
 export function TrainingModal({ petId, petName, open, onOpenChange, knownSkills = [] }: Props) {
   const router = useRouter();
+  const t = useTranslations("trainingModal");
+  const tCommon = useTranslations("common");
   const [skill, setSkill] = useState("");
   const [duration, setDuration] = useState(15);
   const [stars, setStars] = useState<number | null>(null);
@@ -53,7 +56,7 @@ export function TrainingModal({ petId, petName, open, onOpenChange, knownSkills 
           note: note.trim() || undefined,
           occurredAt: new Date(occurredAt).toISOString(),
           metadata: {
-            skill: skill.trim() || "Général",
+            skill: skill.trim() || t("defaultSkill"),
             progress,
             ...(stars !== null ? { stars } : {}),
           },
@@ -71,15 +74,15 @@ export function TrainingModal({ petId, petName, open, onOpenChange, knownSkills 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader onClose={() => onOpenChange(false)}>
-          <DialogTitle>🏅 Dressage — {petName}</DialogTitle>
+          <DialogTitle>🏅 {t("title")} — {petName}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
           {/* Skill */}
           <div className="space-y-1.5">
-            <Label>Compétence</Label>
+            <Label>{t("skill")}</Label>
             <Input
-              placeholder="Ex : Assis, Couché, Rappel..."
+              placeholder={t("skillPlaceholder")}
               value={skill}
               onChange={e => setSkill(e.target.value)}
               list="skills-list"
@@ -94,7 +97,7 @@ export function TrainingModal({ petId, petName, open, onOpenChange, knownSkills 
           {/* Progress bar */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label>Niveau de maîtrise</Label>
+              <Label>{t("mastery")}</Label>
               <span className="text-sm font-medium text-primary">{progress}%</span>
             </div>
             <input
@@ -116,7 +119,7 @@ export function TrainingModal({ petId, petName, open, onOpenChange, knownSkills 
 
           {/* Stars */}
           <div className="space-y-1.5">
-            <Label>Note de la séance</Label>
+            <Label>{t("sessionRating")}</Label>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map(n => (
                 <button
@@ -136,7 +139,7 @@ export function TrainingModal({ petId, petName, open, onOpenChange, knownSkills 
 
           {/* Duration */}
           <div className="space-y-1.5">
-            <Label>Durée</Label>
+            <Label>{t("duration")}</Label>
             <div className="flex items-center gap-2">
               <Input
                 type="number"
@@ -146,13 +149,13 @@ export function TrainingModal({ petId, petName, open, onOpenChange, knownSkills 
                 onChange={e => setDuration(Math.max(1, Number(e.target.value)))}
                 className="w-24"
               />
-              <span className="text-sm text-muted-foreground">minutes</span>
+              <span className="text-sm text-muted-foreground">{tCommon("minutes")}</span>
             </div>
           </div>
 
           {/* Date/time */}
           <div className="space-y-1.5">
-            <Label>Date et heure</Label>
+            <Label>{tCommon("dateTime")}</Label>
             <Input
               type="datetime-local"
               value={occurredAt}
@@ -162,9 +165,9 @@ export function TrainingModal({ petId, petName, open, onOpenChange, knownSkills 
 
           {/* Note */}
           <div className="space-y-1.5">
-            <Label>Note <span className="text-muted-foreground font-normal text-xs">(optionnel)</span></Label>
+            <Label>{tCommon("note")} <span className="text-muted-foreground font-normal text-xs">{tCommon("optional")}</span></Label>
             <Input
-              placeholder="Observations de la séance..."
+              placeholder={t("notePlaceholder")}
               value={note}
               onChange={e => setNote(e.target.value)}
             />
@@ -172,10 +175,10 @@ export function TrainingModal({ petId, petName, open, onOpenChange, knownSkills 
 
           <div className="flex gap-2 pt-1">
             <Button className="flex-1" onClick={submit} disabled={loading}>
-              {loading ? "Enregistrement..." : "Enregistrer"}
+              {loading ? tCommon("saving") : tCommon("save")}
             </Button>
             <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>
-              Annuler
+              {tCommon("cancel")}
             </Button>
           </div>
         </div>

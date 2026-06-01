@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Upload, RotateCcw, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ImageCrop } from "@/components/image-crop";
@@ -14,6 +15,8 @@ interface Props {
 
 export function FaviconManager({ hasFavicon }: Props) {
   const router = useRouter();
+  const t = useTranslations("favicon");
+  const tCommon = useTranslations("common");
   const fileRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -60,14 +63,14 @@ export function FaviconManager({ hasFavicon }: Props) {
     <>
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Icône de l&apos;application</CardTitle>
+          <CardTitle className="text-sm font-medium">{t("title")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Preview section */}
           <div className="flex flex-wrap gap-6 items-end">
             {/* Browser tab preview */}
             <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">Onglet navigateur</p>
+              <p className="text-xs text-muted-foreground">{t("browserTab")}</p>
               <div className="flex items-center gap-1.5 bg-muted/50 rounded-lg px-3 py-2 border w-fit">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={iconUrl} alt="favicon" className="h-4 w-4 rounded-sm object-cover" />
@@ -78,7 +81,7 @@ export function FaviconManager({ hasFavicon }: Props) {
 
             {/* Phone home screen preview */}
             <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">Écran d&apos;accueil</p>
+              <p className="text-xs text-muted-foreground">{t("homeScreen")}</p>
               <div className="flex flex-col items-center gap-1">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -110,21 +113,21 @@ export function FaviconManager({ hasFavicon }: Props) {
               disabled={uploading}
             >
               {uploading ? (
-                <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Envoi...</>
+                <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />{t("sending")}</>
               ) : (
-                <><Upload className="h-3.5 w-3.5 mr-1.5" />Changer l&apos;icône</>
+                <><Upload className="h-3.5 w-3.5 mr-1.5" />{t("changeIcon")}</>
               )}
             </Button>
             {saved && (
               <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                 <CheckCircle2 className="h-3.5 w-3.5" />
-                Enregistré
+                {t("saved")}
               </span>
             )}
             {(previewUrl || hasFavicon) && (
               <Button size="sm" variant="ghost" onClick={handleReset} className="text-muted-foreground">
                 <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                Réinitialiser
+                {t("reset")}
               </Button>
             )}
           </div>
@@ -143,7 +146,7 @@ export function FaviconManager({ hasFavicon }: Props) {
       <Dialog open={!!cropSrc} onOpenChange={v => { if (!v) setCropSrc(null); }}>
         <DialogContent>
           <DialogHeader onClose={() => setCropSrc(null)}>
-            <DialogTitle>Recadrer l&apos;icône</DialogTitle>
+            <DialogTitle>{t("cropTitle")}</DialogTitle>
           </DialogHeader>
           {cropSrc && (
             <ImageCrop

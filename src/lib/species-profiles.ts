@@ -29,18 +29,5 @@ export const SPECIES_QUICK_ACTIONS: Record<SpeciesProfile, string[]> = {
   other:   ["MEAL", "PLAY", "MED", "BATH", "OTHER"],
 };
 
-// Full label map for all event types
-export const EVENT_LABEL_MAP: Record<string, { emoji: string; label: string }> = {
-  WALK:         { emoji: "🦮", label: "Sortie" },
-  MEAL:         { emoji: "🍽️", label: "Repas" },
-  PEE:          { emoji: "💧", label: "Pipi" },
-  POOP:         { emoji: "💩", label: "Caca" },
-  MED:          { emoji: "💊", label: "Soin" },
-  BATH:         { emoji: "🛁", label: "Bain" },
-  LITTER:       { emoji: "🪣", label: "Litière" },
-  PLAY:         { emoji: "🎾", label: "Jeu" },
-  GROOM:        { emoji: "✂️", label: "Toilettage" },
-  WATER_CHANGE: { emoji: "💧", label: "Eau" },
-  TRAINING:     { emoji: "🏅", label: "Dressage" },
-  OTHER:        { emoji: "📝", label: "Autre" },
-};
+// Event type emoji + translated labels live in src/lib/event-labels.ts and the
+// `events` translation namespace (use useEventMeta / getEventMeta).

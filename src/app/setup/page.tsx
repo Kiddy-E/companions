@@ -5,27 +5,30 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslations } from "next-intl";
 import { PawPrint, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const schema = z.object({
-  username: z
-    .string()
-    .min(3, "3 caractères minimum")
-    .max(32)
-    .regex(/^[a-zA-Z0-9_-]+$/, "Lettres, chiffres, - et _ uniquement"),
-  password: z.string().min(12, "12 caractères minimum"),
-});
-
-type FormData = z.infer<typeof schema>;
+type FormData = { username: string; password: string };
 
 export default function SetupPage() {
   const router = useRouter();
+  const t = useTranslations("setup");
+  const tCommon = useTranslations("common");
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const schema = z.object({
+    username: z
+      .string()
+      .min(3, t("usernameMin"))
+      .max(32)
+      .regex(/^[a-zA-Z0-9_-]+$/, t("usernamePattern")),
+    password: z.string().min(12, t("passwordMin")),
+  });
 
   const {
     register,
@@ -51,7 +54,7 @@ export default function SetupPage() {
       router.push("/login");
       return;
     }
-    setServerError(body?.error?.message ?? "Une erreur est survenue");
+    setServerError(body?.error?.message ?? tCommon("error"));
   }
 
   return (
@@ -61,9 +64,9 @@ export default function SetupPage() {
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <PawPrint className="h-6 w-6" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Bienvenue sur Companions</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Créez votre compte administrateur pour commencer
+            {t("subtitle")}
           </p>
         </div>
 
@@ -76,10 +79,10 @@ export default function SetupPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="username">Nom d&apos;utilisateur</Label>
+              <Label htmlFor="username">{t("username")}</Label>
               <Input
                 id="username"
-                placeholder="admin"
+                placeholder={t("usernamePlaceholder")}
                 autoComplete="username"
                 {...register("username")}
               />
@@ -89,12 +92,12 @@ export default function SetupPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password">Mot de passe</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="12 caractères minimum"
+                  placeholder={t("passwordPlaceholder")}
                   autoComplete="new-password"
                   className="pr-10"
                   {...register("password")}
@@ -103,7 +106,7 @@ export default function SetupPage() {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPassword ? "Masquer" : "Afficher"}
+                  aria-label={showPassword ? tCommon("hide") : tCommon("show")}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -114,7 +117,7 @@ export default function SetupPage() {
             </div>
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Création..." : "Créer le compte admin"}
+              {isSubmitting ? t("submitting") : t("submit")}
             </Button>
           </form>
         </div>

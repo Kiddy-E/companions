@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
 import Link from "next/link";
 import { Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { RelativeTime } from "@/components/relative-time";
 import { EditEventModal, type EventRecord } from "@/components/edit-event-modal";
-import { EVENT_LABEL_MAP } from "@/lib/species-profiles";
+import { useEventMeta } from "@/components/use-event-meta";
 
 interface TimelineEvent {
   id: string;
@@ -29,6 +30,10 @@ interface Props {
 
 export function DashboardTimeline({ events: initialEvents, currentUserId, isAdmin }: Props) {
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("dashboardTimeline");
+  const tCommon = useTranslations("common");
+  const eventMeta = useEventMeta();
   const [events, setEvents] = useState(initialEvents);
   const [editing, setEditing] = useState<EventRecord | null>(null);
 
@@ -62,7 +67,7 @@ export function DashboardTimeline({ events: initialEvents, currentUserId, isAdmi
       <Card>
         <CardContent className="p-0 divide-y">
           {events.slice(0, 15).map((e) => {
-            const { emoji, label } = EVENT_LABEL_MAP[e.type] ?? { emoji: "📝", label: e.type };
+            const { emoji, label } = eventMeta(e.type);
             const meta = e.metadata as { hasPee?: boolean; hasPoop?: boolean; grams?: number } | null;
             const details: string[] = [];
             if (e.durationMin) details.push(`${e.durationMin} min`);
@@ -74,7 +79,7 @@ export function DashboardTimeline({ events: initialEvents, currentUserId, isAdmi
                 <span className="text-base flex-shrink-0">{emoji}</span>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm font-medium">{e.pet.name}</span>
-                  <span className="text-xs text-muted-foreground"> · {new Date(e.occurredAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
+                  <span className="text-xs text-muted-foreground"> · {new Date(e.occurredAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</span>
                   <span className="text-sm text-muted-foreground"> — {label}</span>
                   {details.length > 0 && (
                     <span className="text-xs text-muted-foreground"> · {details.join(" ")}</span>
@@ -91,7 +96,7 @@ export function DashboardTimeline({ events: initialEvents, currentUserId, isAdmi
                     <button
                       onClick={() => setEditing(toRecord(e))}
                       className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                      aria-label="Modifier"
+                      aria-label={tCommon("edit")}
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
@@ -103,7 +108,7 @@ export function DashboardTimeline({ events: initialEvents, currentUserId, isAdmi
           {events.length > 15 && (
             <div className="px-4 py-2.5 text-center">
               <Link href="/journal" className="text-xs text-primary hover:underline">
-                Voir les {events.length - 15} autres événements →
+                {t("seeMore", { count: events.length - 15 })}
               </Link>
             </div>
           )}
@@ -111,7 +116,7 @@ export function DashboardTimeline({ events: initialEvents, currentUserId, isAdmi
       </Card>
       <div className="text-right">
         <Link href="/journal" className="text-xs text-muted-foreground hover:text-primary transition-colors">
-          Journal complet →
+          {t("fullJournal")}
         </Link>
       </div>
 

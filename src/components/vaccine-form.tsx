@@ -5,21 +5,20 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const schema = z.object({
-  name: z.string().min(1, "Le nom du vaccin est requis").max(100),
-  administeredAt: z.string().min(1, "La date d'administration est requise"),
-  dueAt: z.string().optional(),
-  vet: z.string().max(200).optional(),
-  note: z.string().max(1000).optional(),
-});
-
-type FormData = z.infer<typeof schema>;
+type FormData = {
+  name: string;
+  administeredAt: string;
+  dueAt?: string;
+  vet?: string;
+  note?: string;
+};
 
 interface Props {
   petId: string;
@@ -41,7 +40,17 @@ const COMMON_VACCINES = [
 
 export function VaccineForm({ petId, petName, vaccine }: Props) {
   const router = useRouter();
+  const t = useTranslations("vaccineForm");
+  const tCommon = useTranslations("common");
   const [error, setError] = useState<string | null>(null);
+
+  const schema = z.object({
+    name: z.string().min(1, t("nameRequired")).max(100),
+    administeredAt: z.string().min(1, t("dateRequired")),
+    dueAt: z.string().optional(),
+    vet: z.string().max(200).optional(),
+    note: z.string().max(1000).optional(),
+  });
 
   const {
     register,
@@ -93,14 +102,14 @@ export function VaccineForm({ petId, petName, vaccine }: Props) {
 
       if (!res.ok) {
         const json = await res.json();
-        setError(json.error?.message ?? "Une erreur est survenue");
+        setError(json.error?.message ?? tCommon("error"));
         return;
       }
 
       router.push(`/pets/${petId}`);
       router.refresh();
     } catch {
-      setError("Une erreur inattendue est survenue");
+      setError(tCommon("unexpectedError"));
     }
   }
 
@@ -113,10 +122,10 @@ export function VaccineForm({ petId, petName, vaccine }: Props) {
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="name">Vaccin *</Label>
+        <Label htmlFor="name">{t("vaccine")} *</Label>
         <Input
           id="name"
-          placeholder="Ex : Rage"
+          placeholder={t("vaccinePlaceholder")}
           list="vaccine-list"
           {...register("name")}
         />
@@ -127,7 +136,7 @@ export function VaccineForm({ petId, petName, vaccine }: Props) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="administeredAt">Date d&#39;administration *</Label>
+        <Label htmlFor="administeredAt">{t("administeredDate")} *</Label>
         <Input id="administeredAt" type="date" {...register("administeredAt")} />
         {errors.administeredAt && (
           <p className="text-xs text-destructive">{errors.administeredAt.message}</p>
@@ -135,21 +144,21 @@ export function VaccineForm({ petId, petName, vaccine }: Props) {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="dueAt">Prochain rappel</Label>
+        <Label htmlFor="dueAt">{t("nextReminder")}</Label>
         <Input id="dueAt" type="date" {...register("dueAt")} />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="vet">Vétérinaire</Label>
-        <Input id="vet" placeholder="Ex : Dr. Martin" {...register("vet")} />
+        <Label htmlFor="vet">{t("vet")}</Label>
+        <Input id="vet" placeholder={t("vetPlaceholder")} {...register("vet")} />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="note">Notes</Label>
+        <Label htmlFor="note">{tCommon("notes")}</Label>
         <textarea
           id="note"
           rows={2}
-          placeholder="Réactions, observations..."
+          placeholder={t("notesPlaceholder")}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
           {...register("note")}
         />
@@ -158,10 +167,10 @@ export function VaccineForm({ petId, petName, vaccine }: Props) {
       <div className="flex gap-3 pt-2">
         <Button type="submit" disabled={isSubmitting} className="flex-1">
           {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {vaccine ? "Enregistrer" : `Ajouter le vaccin pour ${petName}`}
+          {vaccine ? tCommon("save") : t("addForPet", { name: petName })}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.back()}>
-          Annuler
+          {tCommon("cancel")}
         </Button>
       </div>
     </form>

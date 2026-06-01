@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,10 +10,10 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
 const EXERTION = [
-  { value: 0, label: "Repos", emoji: "🛋️" },
-  { value: 1, label: "Balade", emoji: "🚶" },
-  { value: 2, label: "Actif", emoji: "🏃" },
-  { value: 3, label: "Intense", emoji: "🔥" },
+  { value: 0, key: "rest", emoji: "🛋️" },
+  { value: 1, key: "stroll", emoji: "🚶" },
+  { value: 2, key: "active", emoji: "🏃" },
+  { value: 3, key: "intense", emoji: "🔥" },
 ] as const;
 
 function toDatetimeLocal(d: Date) {
@@ -29,6 +30,9 @@ interface Props {
 
 export function WalkModal({ petId, petName, open, onOpenChange }: Props) {
   const router = useRouter();
+  const t = useTranslations("walkModal");
+  const tCommon = useTranslations("common");
+  const tExertion = useTranslations("exertion");
   const [duration, setDuration] = useState(15);
   const [hasPee, setHasPee] = useState(false);
   const [hasPoop, setHasPoop] = useState(false);
@@ -73,13 +77,13 @@ export function WalkModal({ petId, petName, open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader onClose={() => onOpenChange(false)}>
-          <DialogTitle>🦮 Sortie — {petName}</DialogTitle>
+          <DialogTitle>🦮 {t("title")} — {petName}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5">
           {/* Duration */}
           <div className="space-y-1.5">
-            <Label>Durée</Label>
+            <Label>{t("duration")}</Label>
             <div className="flex items-center gap-2">
               <Input
                 type="number"
@@ -89,13 +93,13 @@ export function WalkModal({ petId, petName, open, onOpenChange }: Props) {
                 onChange={e => setDuration(Math.max(1, Number(e.target.value)))}
                 className="w-24"
               />
-              <span className="text-sm text-muted-foreground">minutes</span>
+              <span className="text-sm text-muted-foreground">{tCommon("minutes")}</span>
             </div>
           </div>
 
           {/* Needs */}
           <div className="space-y-1.5">
-            <Label>Besoins effectués</Label>
+            <Label>{t("needs")}</Label>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -107,7 +111,7 @@ export function WalkModal({ petId, petName, open, onOpenChange }: Props) {
                     : "border-border text-muted-foreground hover:bg-muted"
                 )}
               >
-                💧 Pipi
+                💧 {t("pee")}
               </button>
               <button
                 type="button"
@@ -119,16 +123,16 @@ export function WalkModal({ petId, petName, open, onOpenChange }: Props) {
                     : "border-border text-muted-foreground hover:bg-muted"
                 )}
               >
-                💩 Caca
+                💩 {t("poop")}
               </button>
             </div>
           </div>
 
           {/* Exertion gauge */}
           <div className="space-y-1.5">
-            <Label>Dépense physique</Label>
+            <Label>{t("exertion")}</Label>
             <div className="grid grid-cols-4 gap-1.5">
-              {EXERTION.map(({ value, label, emoji }) => (
+              {EXERTION.map(({ value, key, emoji }) => (
                 <button
                   key={value}
                   type="button"
@@ -141,7 +145,7 @@ export function WalkModal({ petId, petName, open, onOpenChange }: Props) {
                   )}
                 >
                   <span className="text-xl leading-none">{emoji}</span>
-                  {label}
+                  {tExertion(key)}
                 </button>
               ))}
             </div>
@@ -149,7 +153,7 @@ export function WalkModal({ petId, petName, open, onOpenChange }: Props) {
 
           {/* Date/time */}
           <div className="space-y-1.5">
-            <Label>Date et heure</Label>
+            <Label>{tCommon("dateTime")}</Label>
             <Input
               type="datetime-local"
               value={occurredAt}
@@ -159,9 +163,9 @@ export function WalkModal({ petId, petName, open, onOpenChange }: Props) {
 
           {/* Note */}
           <div className="space-y-1.5">
-            <Label>Note <span className="text-muted-foreground font-normal text-xs">(optionnel)</span></Label>
+            <Label>{tCommon("note")} <span className="text-muted-foreground font-normal text-xs">{tCommon("optional")}</span></Label>
             <Input
-              placeholder="Météo, comportement..."
+              placeholder={t("notePlaceholder")}
               value={note}
               onChange={e => setNote(e.target.value)}
             />
@@ -169,10 +173,10 @@ export function WalkModal({ petId, petName, open, onOpenChange }: Props) {
 
           <div className="flex gap-2 pt-1">
             <Button className="flex-1" onClick={submit} disabled={loading}>
-              {loading ? "Enregistrement..." : "Enregistrer la sortie"}
+              {loading ? tCommon("saving") : t("submit")}
             </Button>
             <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>
-              Annuler
+              {tCommon("cancel")}
             </Button>
           </div>
         </div>

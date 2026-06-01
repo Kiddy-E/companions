@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslations } from "next-intl";
 import { PawPrint, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,19 +13,21 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Suspense } from "react";
 
-const schema = z.object({
-  username: z.string().min(1, "Nom d'utilisateur requis"),
-  password: z.string().min(1, "Mot de passe requis"),
-});
-
-type FormData = z.infer<typeof schema>;
+type FormData = { username: string; password: string };
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") ?? "/dashboard";
+  const t = useTranslations("login");
+  const tCommon = useTranslations("common");
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const schema = z.object({
+    username: z.string().min(1, t("usernameRequired")),
+    password: z.string().min(1, t("passwordRequired")),
+  });
 
   const {
     register,
@@ -46,7 +49,7 @@ function LoginForm() {
       return;
     }
 
-    setServerError("Nom d'utilisateur ou mot de passe incorrect");
+    setServerError(t("invalidCredentials"));
   }
 
   return (
@@ -57,7 +60,7 @@ function LoginForm() {
             <PawPrint className="h-6 w-6" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Companions</h1>
-          <p className="text-sm text-muted-foreground">Connectez-vous à votre compte</p>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
 
         <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
@@ -69,10 +72,9 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="username">Nom d&apos;utilisateur</Label>
+              <Label htmlFor="username">{t("username")}</Label>
               <Input
                 id="username"
-                placeholder="admin"
                 autoComplete="username"
                 {...register("username")}
               />
@@ -82,7 +84,7 @@ function LoginForm() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password">Mot de passe</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -95,7 +97,7 @@ function LoginForm() {
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPassword ? "Masquer" : "Afficher"}
+                  aria-label={showPassword ? tCommon("hide") : tCommon("show")}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -106,7 +108,7 @@ function LoginForm() {
             </div>
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Connexion..." : "Se connecter"}
+              {isSubmitting ? t("submitting") : t("submit")}
             </Button>
           </form>
         </div>

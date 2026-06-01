@@ -1,32 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useEventMeta } from "@/components/use-event-meta";
 
-const EVENT_TYPE_OPTIONS = [
-  { value: "WALK", label: "🦮 Sortie" },
-  { value: "MEAL", label: "🍽️ Repas" },
-  { value: "LITTER", label: "🪣 Litière" },
-  { value: "PEE", label: "💧 Pipi" },
-  { value: "POOP", label: "💩 Caca" },
-  { value: "PLAY", label: "🎾 Jeu" },
-  { value: "GROOM", label: "✂️ Toilettage" },
-  { value: "TRAINING", label: "🏅 Dressage" },
-  { value: "WATER_CHANGE", label: "💧 Eau" },
-  { value: "MED", label: "💊 Soin" },
-  { value: "BATH", label: "🛁 Bain" },
-  { value: "OTHER", label: "📝 Autre" },
+const EVENT_TYPE_VALUES = [
+  "WALK", "MEAL", "LITTER", "PEE", "POOP", "PLAY",
+  "GROOM", "TRAINING", "WATER_CHANGE", "MED", "BATH", "OTHER",
 ] as const;
 
 const EXERTION = [
-  { value: 0, label: "Repos", emoji: "🛋️" },
-  { value: 1, label: "Balade", emoji: "🚶" },
-  { value: 2, label: "Actif", emoji: "🏃" },
-  { value: 3, label: "Intense", emoji: "🔥" },
+  { value: 0, key: "rest", emoji: "🛋️" },
+  { value: 1, key: "stroll", emoji: "🚶" },
+  { value: 2, key: "active", emoji: "🏃" },
+  { value: 3, key: "intense", emoji: "🔥" },
 ] as const;
 
 interface EventMeta {
@@ -66,6 +58,11 @@ interface Props {
 }
 
 export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: Props) {
+  const t = useTranslations("editEventModal");
+  const tCommon = useTranslations("common");
+  const tExertion = useTranslations("exertion");
+  const tLitter = useTranslations("litter");
+  const eventMeta = useEventMeta();
   const meta = (event.metadata as EventMeta) ?? {};
 
   const [type, setType] = useState(event.type);
@@ -153,47 +150,50 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
     <Dialog open={open} onOpenChange={v => { if (!v) setConfirmDelete(false); onOpenChange(v); }}>
       <DialogContent>
         <DialogHeader onClose={() => { setConfirmDelete(false); onOpenChange(false); }}>
-          <DialogTitle>Modifier l&apos;événement — {event.pet.name}</DialogTitle>
+          <DialogTitle>{t("title")} — {event.pet.name}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Type selector */}
           <div className="space-y-1.5">
-            <Label>Type</Label>
+            <Label>{t("type")}</Label>
             <div className="grid grid-cols-4 gap-1">
-              {EVENT_TYPE_OPTIONS.map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setType(value)}
-                  className={cn(
-                    "py-2 rounded-lg border text-xs font-medium transition-colors",
-                    type === value
-                      ? "bg-primary/10 border-primary text-primary"
-                      : "border-border text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
+              {EVENT_TYPE_VALUES.map((value) => {
+                const { emoji, label } = eventMeta(value);
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setType(value)}
+                    className={cn(
+                      "py-2 rounded-lg border text-xs font-medium transition-colors",
+                      type === value
+                        ? "bg-primary/10 border-primary text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {emoji} {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Meal: grams */}
           {type === "MEAL" && (
             <div className="space-y-1.5">
-              <Label>Quantité <span className="text-muted-foreground font-normal text-xs">(optionnel)</span></Label>
+              <Label>{t("quantity")} <span className="text-muted-foreground font-normal text-xs">{tCommon("optional")}</span></Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
                   min={0}
                   max={5000}
-                  placeholder="Ex : 200"
+                  placeholder="200"
                   value={grams}
                   onChange={e => setGrams(e.target.value)}
                   className="w-28"
                 />
-                <span className="text-sm text-muted-foreground">grammes</span>
+                <span className="text-sm text-muted-foreground">{tCommon("grams")}</span>
               </div>
             </div>
           )}
@@ -201,7 +201,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
           {/* Walk: duration */}
           {type === "WALK" && (
             <div className="space-y-1.5">
-              <Label>Durée</Label>
+              <Label>{t("duration")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
@@ -211,7 +211,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
                   onChange={e => setDuration(Math.max(1, Number(e.target.value)))}
                   className="w-24"
                 />
-                <span className="text-sm text-muted-foreground">minutes</span>
+                <span className="text-sm text-muted-foreground">{tCommon("minutes")}</span>
               </div>
             </div>
           )}
@@ -219,13 +219,13 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
           {/* Walk + Litter: pee/poop */}
           {(type === "WALK" || type === "LITTER") && (
             <div className="space-y-1.5">
-              <Label>Besoins</Label>
+              <Label>{t("needs")}</Label>
               <div className="flex gap-2">
                 <ToggleButton active={hasPee} onClick={() => setHasPee(!hasPee)} color="blue">
-                  💧 Pipi
+                  💧 {eventMeta("PEE").label}
                 </ToggleButton>
                 <ToggleButton active={hasPoop} onClick={() => setHasPoop(!hasPoop)} color="amber">
-                  💩 Caca
+                  💩 {eventMeta("POOP").label}
                 </ToggleButton>
               </div>
             </div>
@@ -234,9 +234,9 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
           {/* Walk: exertion */}
           {type === "WALK" && (
             <div className="space-y-1.5">
-              <Label>Dépense physique</Label>
+              <Label>{t("exertion")}</Label>
               <div className="grid grid-cols-4 gap-1.5">
-                {EXERTION.map(({ value, label, emoji }) => (
+                {EXERTION.map(({ value, key, emoji }) => (
                   <button
                     key={value}
                     type="button"
@@ -249,7 +249,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
                     )}
                   >
                     <span className="text-lg leading-none">{emoji}</span>
-                    {label}
+                    {tExertion(key)}
                   </button>
                 ))}
               </div>
@@ -259,7 +259,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
           {/* Litter: action radio */}
           {type === "LITTER" && (
             <div className="space-y-1.5">
-              <Label>Entretien</Label>
+              <Label>{t("maintenance")}</Label>
               <div className="flex gap-2">
                 {(["cleaned", "changed"] as LitterAction[]).map(opt => (
                   <ToggleButton
@@ -268,7 +268,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
                     onClick={() => setLitterAction(litterAction === opt ? null : opt)}
                     color={opt === "changed" ? "blue" : "green"}
                   >
-                    {opt === "cleaned" ? "🧹 Nettoyée" : "♻️ Changée"}
+                    {opt === "cleaned" ? `🧹 ${tLitter("cleaned")}` : `♻️ ${tLitter("changed")}`}
                   </ToggleButton>
                 ))}
               </div>
@@ -277,7 +277,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
 
           {/* Date/time */}
           <div className="space-y-1.5">
-            <Label>Date et heure</Label>
+            <Label>{tCommon("dateTime")}</Label>
             <Input
               type="datetime-local"
               value={occurredAt}
@@ -287,9 +287,9 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
 
           {/* Note */}
           <div className="space-y-1.5">
-            <Label>Note <span className="text-muted-foreground font-normal text-xs">(optionnel)</span></Label>
+            <Label>{tCommon("note")} <span className="text-muted-foreground font-normal text-xs">{tCommon("optional")}</span></Label>
             <Input
-              placeholder="Note..."
+              placeholder={t("notePlaceholder")}
               value={note}
               onChange={e => setNote(e.target.value)}
             />
@@ -297,7 +297,7 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
 
           <div className="flex gap-2 pt-1">
             <Button className="flex-1" onClick={save} disabled={loading}>
-              {loading ? "Enregistrement..." : "Enregistrer"}
+              {loading ? tCommon("saving") : tCommon("save")}
             </Button>
             <Button
               variant={confirmDelete ? "destructive" : "outline"}
@@ -305,12 +305,12 @@ export function EditEventModal({ event, open, onOpenChange, onSave, onDelete }: 
               disabled={deleting}
               className="shrink-0"
             >
-              {deleting ? "..." : confirmDelete ? "Confirmer" : "Supprimer"}
+              {deleting ? t("deleting") : confirmDelete ? tCommon("confirm") : tCommon("delete")}
             </Button>
           </div>
           {confirmDelete && (
             <p className="text-xs text-destructive text-center -mt-2">
-              Cliquez à nouveau pour confirmer la suppression
+              {t("confirmDeleteHint")}
             </p>
           )}
         </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   PawPrint,
   LayoutDashboard,
@@ -31,14 +32,14 @@ interface NavUser {
 }
 
 const navItems = [
-  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/pets", label: "Animaux", icon: PawPrint },
-  { href: "/journal", label: "Journal", icon: BookOpen },
-];
+  { href: "/dashboard", key: "dashboard", icon: LayoutDashboard },
+  { href: "/pets", key: "pets", icon: PawPrint },
+  { href: "/journal", key: "journal", icon: BookOpen },
+] as const;
 
 const adminItems = [
-  { href: "/settings", label: "Paramètres", icon: Settings },
-];
+  { href: "/settings", key: "settings", icon: Settings },
+] as const;
 
 function NavLink({
   href,
@@ -73,6 +74,7 @@ function NavLink({
 
 function UserMenu({ user }: { user: NavUser }) {
   const router = useRouter();
+  const t = useTranslations("nav");
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -99,11 +101,11 @@ function UserMenu({ user }: { user: NavUser }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem asChild>
-          <Link href="/profile">Mon profil</Link>
+          <Link href="/profile">{t("profile")}</Link>
         </DropdownMenuItem>
         {user.role === Role.ADMIN && (
           <DropdownMenuItem asChild>
-            <Link href="/settings/users">Gérer les utilisateurs</Link>
+            <Link href="/settings/users">{t("manageUsers")}</Link>
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
@@ -112,7 +114,7 @@ function UserMenu({ user }: { user: NavUser }) {
           className="text-destructive focus:text-destructive"
         >
           <LogOut className="mr-2 h-4 w-4" />
-          Déconnexion
+          {t("logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -126,24 +128,25 @@ function SidebarContent({
   user: NavUser;
   onLinkClick?: () => void;
 }) {
+  const t = useTranslations("nav");
   return (
     <div className="flex h-full flex-col gap-2">
       <div className="flex items-center gap-2 px-3 py-4">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <PawPrint className="h-4 w-4" />
         </div>
-        <span className="font-semibold text-foreground">Companions</span>
+        <span className="font-semibold text-foreground">{t("appName")}</span>
       </div>
 
       <nav className="flex-1 space-y-1 px-2">
         {navItems.map((item) => (
-          <NavLink key={item.href} {...item} onClick={onLinkClick} />
+          <NavLink key={item.href} href={item.href} label={t(item.key)} icon={item.icon} onClick={onLinkClick} />
         ))}
         {user.role === Role.ADMIN && (
           <>
             <div className="my-2 border-t" />
             {adminItems.map((item) => (
-              <NavLink key={item.href} {...item} onClick={onLinkClick} />
+              <NavLink key={item.href} href={item.href} label={t(item.key)} icon={item.icon} onClick={onLinkClick} />
             ))}
           </>
         )}
@@ -158,6 +161,7 @@ function SidebarContent({
 
 export function AppNav({ user }: { user: NavUser }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const t = useTranslations("nav");
 
   return (
     <>
@@ -171,7 +175,7 @@ export function AppNav({ user }: { user: NavUser }) {
         <button
           onClick={() => setMobileOpen(true)}
           className="rounded-lg p-1.5 hover:bg-muted"
-          aria-label="Menu"
+          aria-label={t("menu")}
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -179,7 +183,7 @@ export function AppNav({ user }: { user: NavUser }) {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <PawPrint className="h-4 w-4" />
           </div>
-          <span className="font-semibold text-base">Companions</span>
+          <span className="font-semibold text-base">{t("appName")}</span>
         </div>
       </div>
 
@@ -194,7 +198,7 @@ export function AppNav({ user }: { user: NavUser }) {
             <button
               onClick={() => setMobileOpen(false)}
               className="absolute right-3 top-3 rounded-lg p-1.5 hover:bg-muted"
-              aria-label="Fermer"
+              aria-label={t("close")}
             >
               <X className="h-5 w-5" />
             </button>

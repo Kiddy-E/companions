@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { EVENT_LABEL_MAP } from "@/lib/species-profiles";
+import { useEventMeta } from "@/components/use-event-meta";
 
 function toDatetimeLocal(d: Date) {
   const p = (n: number) => String(n).padStart(2, "0");
@@ -23,7 +24,10 @@ interface Props {
 
 export function QuickEventModal({ petId, petName, eventType, open, onOpenChange }: Props) {
   const router = useRouter();
-  const { emoji, label } = EVENT_LABEL_MAP[eventType] ?? { emoji: "📝", label: eventType };
+  const t = useTranslations("quickEventModal");
+  const tCommon = useTranslations("common");
+  const eventMeta = useEventMeta();
+  const { emoji, label } = eventMeta(eventType);
   const isOther = eventType === "OTHER";
   const [note, setNote] = useState("");
   const [occurredAt, setOccurredAt] = useState(() => toDatetimeLocal(new Date()));
@@ -65,7 +69,7 @@ export function QuickEventModal({ petId, petName, eventType, open, onOpenChange 
         <div className="space-y-4">
           {/* Date/time */}
           <div className="space-y-1.5">
-            <Label>Date et heure</Label>
+            <Label>{tCommon("dateTime")}</Label>
             <Input
               type="datetime-local"
               value={occurredAt}
@@ -76,14 +80,14 @@ export function QuickEventModal({ petId, petName, eventType, open, onOpenChange 
           {/* Note — textarea + required for OTHER */}
           <div className="space-y-1.5">
             <Label>
-              {isOther ? "Que s'est-il passé ?" : "Note"}
-              {!isOther && <span className="text-muted-foreground font-normal text-xs ml-1">(optionnel)</span>}
+              {isOther ? t("whatHappened") : tCommon("note")}
+              {!isOther && <span className="text-muted-foreground font-normal text-xs ml-1">{tCommon("optional")}</span>}
             </Label>
             <textarea
               rows={isOther ? 3 : 2}
               placeholder={isOther
-                ? "Ex : a vomi, a toussé, comportement inhabituel..."
-                : "Observations, quantité..."
+                ? t("otherPlaceholder")
+                : t("defaultPlaceholder")
               }
               value={note}
               onChange={e => setNote(e.target.value)}
@@ -97,10 +101,10 @@ export function QuickEventModal({ petId, petName, eventType, open, onOpenChange 
               onClick={submit}
               disabled={loading || (isOther && !note.trim())}
             >
-              {loading ? "Enregistrement..." : "Enregistrer"}
+              {loading ? tCommon("saving") : tCommon("save")}
             </Button>
             <Button variant="outline" onClick={() => { reset(); onOpenChange(false); }}>
-              Annuler
+              {tCommon("cancel")}
             </Button>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslations, useLocale } from "next-intl";
 import { Plus, Copy, Check, Trash2, Loader2, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,13 +21,11 @@ const ALL_SCOPES = [
   "vaccines:read", "vaccines:write",
 ] as const;
 
-const schema = z.object({
-  name: z.string().min(1, "Un nom est requis").max(100),
-  scopes: z.array(z.enum(ALL_SCOPES)).min(1, "Choisissez au moins un scope"),
-  expiresAt: z.string().optional(),
-});
-
-type FormData = z.infer<typeof schema>;
+type FormData = {
+  name: string;
+  scopes: (typeof ALL_SCOPES)[number][];
+  expiresAt?: string;
+};
 
 interface Token {
   id: string;
@@ -43,6 +42,7 @@ interface Props {
 }
 
 function CopyButton({ text }: { text: string }) {
+  const tCommon = useTranslations("common");
   const [copied, setCopied] = useState(false);
   async function copy() {
     await navigator.clipboard.writeText(text);
@@ -52,18 +52,27 @@ function CopyButton({ text }: { text: string }) {
   return (
     <Button size="sm" variant="outline" onClick={copy} className="h-7 text-xs px-2">
       {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-      {copied ? "Copié" : "Copier"}
+      {copied ? tCommon("copied") : tCommon("copy")}
     </Button>
   );
 }
 
 export function ApiTokensManager({ initialTokens }: Props) {
   const router = useRouter();
+  const t = useTranslations("apiTokens");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [tokens, setTokens] = useState<Token[]>(initialTokens);
   const [newToken, setNewToken] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
+
+  const schema = z.object({
+    name: z.string().min(1, t("nameRequired")).max(100),
+    scopes: z.array(z.enum(ALL_SCOPES)).min(1, t("scopeRequired")),
+    expiresAt: z.string().optional(),
+  });
 
   const {
     register,
@@ -101,7 +110,7 @@ export function ApiTokensManager({ initialTokens }: Props) {
       });
       if (!res.ok) {
         const j = await res.json();
-        setError(j.error?.message ?? "Erreur lors de la création");
+        setError(j.error?.message ?? t("createError"));
         return;
       }
       const { token } = await res.json();
@@ -116,7 +125,7 @@ export function ApiTokensManager({ initialTokens }: Props) {
         setTokens(list);
       }
     } catch {
-      setError("Erreur inattendue");
+      setError(t("unexpectedError"));
     }
   }
 
@@ -137,7 +146,7 @@ export function ApiTokensManager({ initialTokens }: Props) {
         <Alert className="border-primary/40 bg-primary/5">
           <AlertDescription className="space-y-2">
             <p className="font-medium text-sm">
-              ✅ Token créé — copiez-le maintenant, il ne sera plus affiché
+              {t("createdTitle")}
             </p>
             <div className="flex items-center gap-2 flex-wrap">
               <code className="text-xs bg-muted px-2 py-1 rounded font-mono break-all flex-1">
@@ -151,7 +160,7 @@ export function ApiTokensManager({ initialTokens }: Props) {
               className="text-xs h-6"
               onClick={() => setNewToken(null)}
             >
-              J&#39;ai copié le token
+              {t("copiedConfirm")}
             </Button>
           </AlertDescription>
         </Alert>
@@ -161,7 +170,7 @@ export function ApiTokensManager({ initialTokens }: Props) {
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Key className="h-4 w-4" />
-            Tokens API ({tokens.length})
+            {t("title", { count: tokens.length })}
           </CardTitle>
           <Button
             size="sm"
@@ -169,7 +178,7 @@ export function ApiTokensManager({ initialTokens }: Props) {
             onClick={() => { setCreating(!creating); setError(null); }}
           >
             <Plus className="h-3.5 w-3.5 mr-1" />
-            Nouveau token
+            {t("newToken")}
           </Button>
         </CardHeader>
 
@@ -184,10 +193,10 @@ export function ApiTokensManager({ initialTokens }: Props) {
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="token-name" className="text-xs">Nom *</Label>
+                <Label htmlFor="token-name" className="text-xs">{t("name")} *</Label>
                 <Input
                   id="token-name"
-                  placeholder="Ex : Home Assistant"
+                  placeholder={t("namePlaceholder")}
                   className="h-8 text-sm"
                   {...register("name")}
                 />
@@ -195,7 +204,7 @@ export function ApiTokensManager({ initialTokens }: Props) {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs">Scopes *</Label>
+                <Label className="text-xs">{t("scopes")} *</Label>
                 <div className="flex flex-wrap gap-1.5">
                   {ALL_SCOPES.map((scope) => (
                     <button
@@ -216,7 +225,7 @@ export function ApiTokensManager({ initialTokens }: Props) {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="token-expires" className="text-xs">Expiration (optionnel)</Label>
+                <Label htmlFor="token-expires" className="text-xs">{t("expiration")} {tCommon("optional")}</Label>
                 <Input
                   id="token-expires"
                   type="date"
@@ -228,10 +237,10 @@ export function ApiTokensManager({ initialTokens }: Props) {
               <div className="flex gap-2">
                 <Button type="submit" size="sm" disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
-                  Créer
+                  {t("create")}
                 </Button>
                 <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(false)}>
-                  Annuler
+                  {tCommon("cancel")}
                 </Button>
               </div>
             </form>
@@ -240,7 +249,7 @@ export function ApiTokensManager({ initialTokens }: Props) {
           {/* Token list */}
           {tokens.length === 0 && !creating ? (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Aucun token actif. Créez-en un pour intégrer Home Assistant ou d&#39;autres outils.
+              {t("none")}
             </p>
           ) : (
             <div className="space-y-0">
@@ -263,24 +272,27 @@ export function ApiTokensManager({ initialTokens }: Props) {
                       </div>
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                         <span>
-                          Créé{" "}
-                          {new Date(token.createdAt).toLocaleDateString("fr-FR", {
-                            day: "numeric", month: "short", year: "numeric",
+                          {t("created", {
+                            date: new Date(token.createdAt).toLocaleDateString(locale, {
+                              day: "numeric", month: "short", year: "numeric",
+                            }),
                           })}
                         </span>
                         {token.lastUsedAt && (
                           <span>
-                            Utilisé{" "}
-                            {new Date(token.lastUsedAt).toLocaleDateString("fr-FR", {
-                              day: "numeric", month: "short",
+                            {t("used", {
+                              date: new Date(token.lastUsedAt).toLocaleDateString(locale, {
+                                day: "numeric", month: "short",
+                              }),
                             })}
                           </span>
                         )}
                         {token.expiresAt && (
                           <span className={new Date(token.expiresAt) < new Date() ? "text-destructive" : ""}>
-                            Expire{" "}
-                            {new Date(token.expiresAt).toLocaleDateString("fr-FR", {
-                              day: "numeric", month: "short", year: "numeric",
+                            {t("expires", {
+                              date: new Date(token.expiresAt).toLocaleDateString(locale, {
+                                day: "numeric", month: "short", year: "numeric",
+                              }),
                             })}
                           </span>
                         )}
@@ -310,11 +322,11 @@ export function ApiTokensManager({ initialTokens }: Props) {
       {/* Home Assistant example */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Exemple Home Assistant</CardTitle>
+          <CardTitle className="text-sm font-medium">{t("haTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-xs text-muted-foreground">
-            Créez un token avec les scopes <code className="bg-muted px-1 rounded">events:write</code> et <code className="bg-muted px-1 rounded">pets:read</code>, puis utilisez-le dans vos automatisations :
+            {t("haDesc")}
           </p>
           <pre className="text-xs bg-muted rounded-lg p-3 overflow-x-auto">
 {`rest_command:

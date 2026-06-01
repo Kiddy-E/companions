@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +13,8 @@ interface Props {
 
 export function DeletePetButton({ petId, petName }: Props) {
   const router = useRouter();
+  const t = useTranslations("petDetail");
+  const tCommon = useTranslations("common");
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -30,17 +33,17 @@ export function DeletePetButton({ petId, petName }: Props) {
   if (confirming) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Supprimer {petName} ?</span>
+        <span className="text-xs text-muted-foreground">{t("deleteConfirm", { name: petName })}</span>
         <Button
           size="sm"
           variant="destructive"
           onClick={handleDelete}
           disabled={loading}
         >
-          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Oui"}
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : tCommon("yes")}
         </Button>
         <Button size="sm" variant="outline" onClick={() => setConfirming(false)}>
-          Non
+          {tCommon("no")}
         </Button>
       </div>
     );

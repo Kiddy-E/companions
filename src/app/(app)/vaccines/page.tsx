@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getSessionFromCookie } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
 import Link from "next/link";
 import { Plus, Syringe, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import { Separator } from "@/components/ui/separator";
 export default async function VaccinesPage() {
   const session = await getSessionFromCookie();
   if (!session) redirect("/login");
+
+  const t = await getTranslations("vaccines");
 
   const now = new Date();
   const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -31,16 +34,16 @@ export default async function VaccinesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Vaccins</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            {vaccines.length} vaccin{vaccines.length !== 1 ? "s" : ""} enregistré{vaccines.length !== 1 ? "s" : ""}
+            {vaccines.length === 1 ? t("countOne", { count: vaccines.length }) : t("countOther", { count: vaccines.length })}
           </p>
         </div>
         {pets.length > 0 && (
           <Button asChild size="sm">
             <Link href={`/pets/${pets[0].id}/vaccines/new`}>
               <Plus className="h-4 w-4 mr-1.5" />
-              Ajouter
+              {t("add")}
             </Link>
           </Button>
         )}
@@ -49,7 +52,7 @@ export default async function VaccinesPage() {
       {/* Overdue */}
       {overdue.length > 0 && (
         <VaccineGroup
-          title="En retard"
+          title={t("overdue")}
           icon={<AlertTriangle className="h-4 w-4 text-destructive" />}
           vaccines={overdue}
           variant="overdue"
@@ -59,7 +62,7 @@ export default async function VaccinesPage() {
       {/* Due soon */}
       {dueSoon.length > 0 && (
         <VaccineGroup
-          title="À venir (30 jours)"
+          title={t("dueSoon")}
           icon={<Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />}
           vaccines={dueSoon}
           variant="soon"
@@ -94,15 +97,15 @@ export default async function VaccinesPage() {
       {vaccines.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center">
           <Syringe className="h-12 w-12 text-muted-foreground/40 mb-4" />
-          <h3 className="font-semibold text-lg">Aucun vaccin enregistré</h3>
+          <h3 className="font-semibold text-lg">{t("noneTitle")}</h3>
           <p className="text-muted-foreground text-sm mt-1 mb-4">
-            Suivez les vaccinations et recevez des rappels pour les prochains rendez-vous
+            {t("noneDesc")}
           </p>
           {pets.length > 0 && (
             <Button asChild>
               <Link href={`/pets/${pets[0].id}/vaccines/new`}>
                 <Plus className="h-4 w-4 mr-1.5" />
-                Ajouter un vaccin
+                {t("addVaccine")}
               </Link>
             </Button>
           )}
@@ -151,7 +154,9 @@ function VaccineGroup({
   );
 }
 
-function VaccineList({ vaccines, showPet }: { vaccines: VaccineWithPet[]; showPet?: boolean }) {
+async function VaccineList({ vaccines, showPet }: { vaccines: VaccineWithPet[]; showPet?: boolean }) {
+  const t = await getTranslations("vaccines");
+  const locale = await getLocale();
   return (
     <div className="space-y-0">
       {vaccines.map((v, i) => (
@@ -163,9 +168,10 @@ function VaccineList({ vaccines, showPet }: { vaccines: VaccineWithPet[]; showPe
                 {v.name}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Administré{" "}
-                {new Date(v.administeredAt).toLocaleDateString("fr-FR", {
-                  day: "numeric", month: "long", year: "numeric",
+                {t("administered", {
+                  date: new Date(v.administeredAt).toLocaleDateString(locale, {
+                    day: "numeric", month: "long", year: "numeric",
+                  }),
                 })}
                 {v.vet ? ` · ${v.vet}` : ""}
               </p>
@@ -176,9 +182,10 @@ function VaccineList({ vaccines, showPet }: { vaccines: VaccineWithPet[]; showPe
                 variant={new Date(v.dueAt) < new Date() ? "destructive" : "outline"}
                 className="text-xs flex-shrink-0"
               >
-                Rappel{" "}
-                {new Date(v.dueAt).toLocaleDateString("fr-FR", {
-                  day: "numeric", month: "short", year: "numeric",
+                {t("reminder", {
+                  date: new Date(v.dueAt).toLocaleDateString(locale, {
+                    day: "numeric", month: "short", year: "numeric",
+                  }),
                 })}
               </Badge>
             )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 
@@ -14,6 +15,8 @@ interface Props {
 }
 
 export function ImageCrop({ src, outputSize = 512, onCrop, onCancel }: Props) {
+  const t = useTranslations("imageCrop");
+  const tCommon = useTranslations("common");
   const imgRef = useRef<HTMLImageElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [natW, setNatW] = useState(1);
@@ -123,7 +126,7 @@ export function ImageCrop({ src, outputSize = 512, onCrop, onCancel }: Props) {
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground text-center">
-        Glissez pour repositionner · Zoom avec le curseur
+        {t("hint")}
       </p>
 
       {/* Crop preview */}
@@ -177,10 +180,10 @@ export function ImageCrop({ src, outputSize = 512, onCrop, onCancel }: Props) {
       {/* Zoom controls */}
       <div className="space-y-1 px-1">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Zoom</span>
+          <span>{t("zoom")}</span>
           <div className="flex items-center gap-2">
             <span>{Math.round(zoom * 100)}%</span>
-            <button onClick={reset} className="hover:text-foreground transition-colors" aria-label="Réinitialiser">
+            <button onClick={reset} className="hover:text-foreground transition-colors" aria-label={t("reset")}>
               <RotateCcw className="h-3 w-3" />
             </button>
           </div>
@@ -198,9 +201,9 @@ export function ImageCrop({ src, outputSize = 512, onCrop, onCancel }: Props) {
 
       <div className="flex gap-2">
         <Button className="flex-1" onClick={handleCrop} disabled={!loaded}>
-          Appliquer le recadrage
+          {t("apply")}
         </Button>
-        <Button variant="outline" onClick={onCancel}>Annuler</Button>
+        <Button variant="outline" onClick={onCancel}>{tCommon("cancel")}</Button>
       </div>
     </div>
   );

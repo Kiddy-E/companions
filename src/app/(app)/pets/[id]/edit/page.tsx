@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PetForm } from "@/components/pet-form";
 import { PetSettingsForm } from "@/components/pet-settings-form";
 
@@ -10,6 +11,8 @@ export default async function EditPetPage({ params }: Props) {
   const pet = await db.pet.findFirst({ where: { id, active: true } });
   if (!pet) notFound();
 
+  const t = await getTranslations("pets");
+
   const settings = (pet.settings ?? {}) as {
     litterLifetimeHours?: number;
     mealGrams?: number;
@@ -19,8 +22,8 @@ export default async function EditPetPage({ params }: Props) {
   return (
     <div className="max-w-lg space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Modifier {pet.name}</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">Informations et paramètres</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("editTitle", { name: pet.name })}</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">{t("editDesc")}</p>
       </div>
 
       <PetForm

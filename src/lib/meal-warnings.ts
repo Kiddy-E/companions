@@ -77,12 +77,19 @@ export function checkMealWarnings(
   return warnings;
 }
 
-export function formatMealWarnings(warnings: MealWarning[]): string | null {
+type MealWarningTranslator = (
+  key: "missed" | "insufficient",
+  values: { time: string; given: number; target: number }
+) => string;
+
+export function formatMealWarnings(
+  warnings: MealWarning[],
+  t: MealWarningTranslator
+): string | null {
   if (!warnings.length) return null;
   return warnings
-    .map((w) => {
-      if (w.type === "missed") return `Repas ${w.slotTime} manqué`;
-      return `Repas ${w.slotTime} : ${w.given}g / ${w.target}g`;
-    })
+    .map((w) =>
+      t(w.type, { time: w.slotTime, given: w.given, target: w.target })
+    )
     .join(" · ");
 }

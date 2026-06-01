@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,8 @@ interface Props {
 
 export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
   const router = useRouter();
+  const t = useTranslations("petSettings");
+  const tCommon = useTranslations("common");
   const [litterCleanHours, setLitterCleanHours] = useState<string>(
     initialSettings.litterCleanHours ? String(initialSettings.litterCleanHours) : ""
   );
@@ -76,7 +79,7 @@ export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
       });
       if (!res.ok) {
         const j = await res.json();
-        setError(j.error?.message ?? "Erreur lors de la sauvegarde");
+        setError(j.error?.message ?? t("saveError"));
         return;
       }
       setSaved(true);
@@ -90,80 +93,80 @@ export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium">Paramètres — {petName}</CardTitle>
+        <CardTitle className="text-sm font-medium">{t("title", { name: petName })}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
         {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
         {/* Litter clean */}
         <div className="space-y-1.5">
-          <Label>🧹 Délai avant nettoyage</Label>
+          <Label>{t("litterCleanLabel")}</Label>
           <div className="flex items-center gap-2">
             <Input
               type="number"
               min={1}
               max={168}
-              placeholder="Ex : 24"
+              placeholder={t("placeholderClean")}
               value={litterCleanHours}
               onChange={e => setLitterCleanHours(e.target.value)}
               className="w-24"
             />
-            <span className="text-sm text-muted-foreground">heures</span>
+            <span className="text-sm text-muted-foreground">{tCommon("hours")}</span>
           </div>
-          <p className="text-xs text-muted-foreground">Alerte si pas de nettoyage depuis ce délai</p>
+          <p className="text-xs text-muted-foreground">{t("litterCleanHint")}</p>
         </div>
 
         {/* Litter change */}
         <div className="space-y-1.5">
-          <Label>♻️ Délai avant changement complet</Label>
+          <Label>{t("litterChangeLabel")}</Label>
           <div className="flex items-center gap-2">
             <Input
               type="number"
               min={1}
               max={30}
-              placeholder="Ex : 7"
+              placeholder={t("placeholderChange")}
               value={litterChangeDays}
               onChange={e => setLitterChangeDays(e.target.value)}
               className="w-24"
             />
-            <span className="text-sm text-muted-foreground">jours</span>
+            <span className="text-sm text-muted-foreground">{tCommon("days")}</span>
           </div>
-          <p className="text-xs text-muted-foreground">Alerte si pas de changement complet depuis ce délai</p>
+          <p className="text-xs text-muted-foreground">{t("litterChangeHint")}</p>
         </div>
 
         {/* Normal meal quantity */}
         <div className="space-y-1.5">
-          <Label>Quantité normale d'un repas</Label>
+          <Label>{t("mealQtyLabel")}</Label>
           <div className="flex items-center gap-2">
             <Input
               type="number"
               min={1}
               max={5000}
-              placeholder="Ex : 200"
+              placeholder={t("placeholderGrams")}
               value={mealGrams}
               onChange={e => setMealGrams(e.target.value)}
               className="w-24"
             />
-            <span className="text-sm text-muted-foreground">grammes</span>
+            <span className="text-sm text-muted-foreground">{tCommon("grams")}</span>
           </div>
         </div>
 
         {/* Meals per day */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label>Horaires des repas</Label>
+            <Label>{t("mealTimesLabel")}</Label>
             <Button type="button" variant="ghost" size="sm" onClick={addMeal}>
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Ajouter
+              {t("add")}
             </Button>
           </div>
           {meals.length === 0 && (
-            <p className="text-xs text-muted-foreground">Aucun horaire configuré</p>
+            <p className="text-xs text-muted-foreground">{t("noTimes")}</p>
           )}
           <div className="space-y-2">
             {meals.map((m, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground w-16">Repas {i + 1}</span>
+                <span className="text-xs text-muted-foreground w-16">{t("mealSlot", { n: i + 1 })}</span>
                 <Input
                   type="time"
                   value={m.time}
@@ -192,13 +195,13 @@ export function PetSettingsForm({ petId, petName, initialSettings }: Props) {
           </div>
           {meals.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              Alerte si un repas prévu est en retard de plus d'1 heure
+              {t("mealLateHint")}
             </p>
           )}
         </div>
 
         <Button onClick={save} disabled={saving} size="sm">
-          {saving ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Enregistrement...</> : saved ? "✅ Enregistré" : "Enregistrer les paramètres"}
+          {saving ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />{t("saving")}</> : saved ? t("saved") : t("save")}
         </Button>
       </CardContent>
     </Card>

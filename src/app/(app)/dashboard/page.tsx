@@ -1,6 +1,7 @@
 import { getSessionFromCookie } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
 import Link from "next/link";
 import { PawPrint, Plus, AlertTriangle, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { QuickEventButtons } from "@/components/quick-event-buttons";
 import { DashboardTimeline } from "@/components/dashboard-timeline";
 import { buildLastEventMap } from "@/lib/event-utils";
 import { getSpeciesProfile } from "@/lib/species-profiles";
-import { EVENT_LABEL_MAP } from "@/lib/species-profiles";
+import { getEventMeta } from "@/lib/event-meta-server";
 import { checkMealWarnings, formatMealWarnings } from "@/lib/meal-warnings";
 
 interface PetSettings {
@@ -32,6 +33,8 @@ const SPECIES_STATUS_TYPES: Record<string, string[]> = {
 };
 
 async function getDashboardData() {
+  const t = await getTranslations("dashboard");
+  const tMeal = await getTranslations("mealWarnings");
   const now = new Date();
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
@@ -96,7 +99,8 @@ async function getDashboardData() {
     if (settings.meals?.length) {
       const petMealsToday = todayEvents.filter(e => e.petId === pet.id && e.type === "MEAL");
       const mealMsg = formatMealWarnings(
-        checkMealWarnings(settings.meals, settings.mealGrams, petMealsToday, now)
+        checkMealWarnings(settings.meals, settings.mealGrams, petMealsToday, now),
+        tMeal
       );
       if (mealMsg)
         warnings.push({ petId: pet.id, petName: pet.name, message: mealMsg, level: "urgent" });
@@ -111,11 +115,11 @@ async function getDashboardData() {
           return meta?.action === "cleaned" || meta?.action === "changed" || meta?.cleaned === true;
         });
       if (!recentLitter) {
-        warnings.push({ petId: pet.id, petName: pet.name, message: "Litière jamais nettoyée", level: "warn" });
+        warnings.push({ petId: pet.id, petName: pet.name, message: t("litterNeverCleaned"), level: "warn" });
       } else {
         const h = (now.getTime() - recentLitter.occurredAt.getTime()) / 3600000;
         if (h > settings.litterCleanHours)
-          warnings.push({ petId: pet.id, petName: pet.name, message: `Litière à nettoyer (${Math.floor(h)}h)`, level: "warn" });
+          warnings.push({ petId: pet.id, petName: pet.name, message: t("litterToClean", { hours: Math.floor(h) }), level: "warn" });
       }
     }
 
@@ -125,12 +129,12 @@ async function getDashboardData() {
         .filter((e) => e.petId === pet.id && e.type === "LITTER")
         .find((e) => (e.metadata as { action?: string } | null)?.action === "changed");
       if (!lastChange) {
-        warnings.push({ petId: pet.id, petName: pet.name, message: "Litière jamais changée", level: "warn" });
+        warnings.push({ petId: pet.id, petName: pet.name, message: t("litterNeverChanged"), level: "warn" });
       } else {
         const h = (now.getTime() - lastChange.occurredAt.getTime()) / 3600000;
         if (h > settings.litterChangeHours) {
           const days = Math.round(settings.litterChangeHours / 24);
-          warnings.push({ petId: pet.id, petName: pet.name, message: `Litière à changer (${Math.floor(h / 24)}j / max ${days}j)`, level: "warn" });
+          warnings.push({ petId: pet.id, petName: pet.name, message: t("litterToChange", { days: Math.floor(h / 24), max: days }), level: "warn" });
         }
       }
     }
@@ -146,10 +150,14 @@ export default async function DashboardPage() {
   const { pets, todayEvents, todayCountMap, lastEventMap, warnings } =
     await getDashboardData();
 
+  const t = await getTranslations("dashboard");
+  const locale = await getLocale();
+  const eventMeta = await getEventMeta();
+
   const now = new Date();
   const hour = now.getHours();
-  const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
-  const dateLabel = now.toLocaleDateString("fr-FR", {
+  const greeting = hour < 12 ? t("greetingMorning") : hour < 18 ? t("greetingAfternoon") : t("greetingEvening");
+  const dateLabel = now.toLocaleDateString(locale, {
     weekday: "long", day: "numeric", month: "long",
   });
 
@@ -170,7 +178,7 @@ export default async function DashboardPage() {
           <Button asChild size="sm" className="flex-shrink-0">
             <Link href="/pets/new">
               <Plus className="h-4 w-4 mr-1.5" />
-              Ajouter
+              {t("add")}
             </Link>
           </Button>
         )}
@@ -180,7 +188,7 @@ export default async function DashboardPage() {
       {urgentWarnings.length > 0 && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-3 space-y-1.5">
           <p className="text-xs font-semibold text-destructive flex items-center gap-1.5">
-            <AlertTriangle className="h-3.5 w-3.5" /> Alertes
+            <AlertTriangle className="h-3.5 w-3.5" /> {t("alerts")}
           </p>
           {urgentWarnings.map((w, i) => (
             <div key={i} className="flex items-center justify-between text-sm">
@@ -195,7 +203,7 @@ export default async function DashboardPage() {
       {softWarnings.length > 0 && (
         <div className="rounded-xl border border-amber-300/60 bg-amber-50/60 dark:bg-amber-950/20 p-3 space-y-1.5">
           <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
-            <AlertTriangle className="h-3.5 w-3.5" /> À faire
+            <AlertTriangle className="h-3.5 w-3.5" /> {t("todo")}
           </p>
           {softWarnings.map((w, i) => (
             <div key={i} className="flex items-center justify-between text-sm">
@@ -210,14 +218,14 @@ export default async function DashboardPage() {
       {pets.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center">
           <PawPrint className="h-12 w-12 text-muted-foreground/40 mb-4" />
-          <h3 className="font-semibold text-lg">Aucun animal pour l&#39;instant</h3>
+          <h3 className="font-semibold text-lg">{t("noPetsTitle")}</h3>
           <p className="text-muted-foreground text-sm mt-1 mb-4">
-            Ajoutez votre premier animal de compagnie pour commencer le suivi
+            {t("noPetsDesc")}
           </p>
           <Button asChild>
             <Link href="/pets/new">
               <Plus className="h-4 w-4 mr-1.5" />
-              Ajouter un animal
+              {t("addPet")}
             </Link>
           </Button>
         </div>
@@ -227,7 +235,7 @@ export default async function DashboardPage() {
       {pets.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Aujourd&#39;hui
+            {t("today")}
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {pets.map((pet) => {
@@ -274,7 +282,7 @@ export default async function DashboardPage() {
                     <div className="flex flex-wrap gap-1.5">
                       {statusTypes.map((type) => {
                         const count = todayCounts.get(type) ?? 0;
-                        const { emoji, label } = EVENT_LABEL_MAP[type] ?? { emoji: "📝", label: type };
+                        const { emoji, label } = eventMeta(type);
                         const done = count > 0;
                         return (
                           <Badge
@@ -314,7 +322,7 @@ export default async function DashboardPage() {
       {todayEvents.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Activités du jour
+            {t("todayActivity")}
           </h2>
           <DashboardTimeline
             events={todayEvents.map(e => ({ ...e, occurredAt: e.occurredAt.toISOString() }))}

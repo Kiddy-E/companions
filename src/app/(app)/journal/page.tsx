@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getSessionFromCookie } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Calendar } from "lucide-react";
 import { JournalFilters } from "@/components/journal-filters";
 import { JournalList } from "@/components/journal-list";
@@ -16,6 +17,7 @@ export default async function JournalPage({
   const session = await getSessionFromCookie();
   if (!session) redirect("/login");
 
+  const t = await getTranslations("journal");
   const filters = await searchParams;
 
   const pets = await db.pet.findMany({
@@ -42,10 +44,10 @@ export default async function JournalPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Journal</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
         <p className="text-muted-foreground text-sm mt-0.5">
-          {events.length} événement{events.length !== 1 ? "s" : ""}
-          {events.length === 100 ? " (100 max affichés)" : ""}
+          {events.length === 1 ? t("countOne", { count: events.length }) : t("countOther", { count: events.length })}
+          {events.length === 100 ? t("maxShown") : ""}
         </p>
       </div>
 
@@ -54,9 +56,9 @@ export default async function JournalPage({
       {events.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center">
           <Calendar className="h-12 w-12 text-muted-foreground/40 mb-4" />
-          <h3 className="font-semibold text-lg">Aucun événement</h3>
+          <h3 className="font-semibold text-lg">{t("noneTitle")}</h3>
           <p className="text-muted-foreground text-sm mt-1">
-            Utilisez les boutons rapides sur le tableau de bord pour enregistrer des activités
+            {t("noneDesc")}
           </p>
         </div>
       ) : (

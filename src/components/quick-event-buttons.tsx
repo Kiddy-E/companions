@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { WalkModal } from "@/components/walk-modal";
 import { LitterModal } from "@/components/litter-modal";
 import { MealModal } from "@/components/meal-modal";
 import { TrainingModal } from "@/components/training-modal";
 import { QuickEventModal } from "@/components/quick-event-modal";
-import { getSpeciesProfile, SPECIES_QUICK_ACTIONS, EVENT_LABEL_MAP } from "@/lib/species-profiles";
-import { formatRelativeTime } from "@/lib/date-utils";
+import { getSpeciesProfile, SPECIES_QUICK_ACTIONS } from "@/lib/species-profiles";
+import { useEventMeta } from "@/components/use-event-meta";
+import { getRelativeTimeParts } from "@/lib/date-utils";
 
 interface Props {
   petId: string;
@@ -32,6 +34,8 @@ export function QuickEventButtons({
   lastEvents = {}, knownSkills = [], defaultMealGrams,
 }: Props) {
   const [modal, setModal] = useState<ModalState>(null);
+  const eventMeta = useEventMeta();
+  const tRelative = useTranslations("relativeTime");
 
   const profile = getSpeciesProfile(species);
   const actions = SPECIES_QUICK_ACTIONS[profile];
@@ -49,8 +53,9 @@ export function QuickEventButtons({
   }
 
   function renderButton(type: string, fullWidth = false) {
-    const { emoji, label } = EVENT_LABEL_MAP[type] ?? { emoji: "📝", label: type };
+    const { emoji, label } = eventMeta(type);
     const last = lastEvents[type];
+    const parts = last ? getRelativeTimeParts(last) : null;
     return (
       <Button
         key={type}
@@ -60,9 +65,9 @@ export function QuickEventButtons({
         onClick={() => handleClick(type)}
       >
         <span>{emoji} {label}</span>
-        {last && (
+        {parts && (
           <span className="text-[10px] text-muted-foreground font-normal leading-tight">
-            {formatRelativeTime(last)}
+            {tRelative(parts.unit, { count: parts.count })}
           </span>
         )}
       </Button>

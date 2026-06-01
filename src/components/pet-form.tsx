@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslations } from "next-intl";
 import { PawPrint, Camera, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,15 +14,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ImageCrop } from "@/components/image-crop";
 
-const schema = z.object({
-  name: z.string().min(1, "Le nom est requis").max(100),
-  species: z.string().min(1, "L'espèce est requise").max(50),
-  breed: z.string().max(100).optional(),
-  birthDate: z.string().optional(),
-  notes: z.string().max(2000).optional(),
-});
-
-type FormData = z.infer<typeof schema>;
+type FormData = {
+  name: string;
+  species: string;
+  breed?: string;
+  birthDate?: string;
+  notes?: string;
+};
 
 interface Props {
   pet?: {
@@ -35,11 +34,22 @@ interface Props {
   };
 }
 
-const SPECIES_OPTIONS = ["Chien", "Chat", "Lapin", "Oiseau", "Poisson", "Reptile", "Autre"];
+const SPECIES_KEYS = ["dog", "cat", "rabbit", "bird", "fish", "reptile", "other"] as const;
 
 export function PetForm({ pet }: Props) {
   const router = useRouter();
+  const t = useTranslations("petForm");
+  const tCommon = useTranslations("common");
+  const tSpecies = useTranslations("species");
   const [error, setError] = useState<string | null>(null);
+
+  const schema = z.object({
+    name: z.string().min(1, t("nameRequired")).max(100),
+    species: z.string().min(1, t("speciesRequired")).max(50),
+    breed: z.string().max(100).optional(),
+    birthDate: z.string().optional(),
+    notes: z.string().max(2000).optional(),
+  });
   const [photoPreview, setPhotoPreview] = useState<string | null>(
     pet?.photoPath ? `/api/pets/${pet.id}/photo` : null
   );
@@ -97,7 +107,7 @@ export function PetForm({ pet }: Props) {
 
       if (!res.ok) {
         const json = await res.json();
-        setError(json.error?.message ?? "Une erreur est survenue");
+        setError(json.error?.message ?? tCommon("error"));
         return;
       }
 
@@ -109,7 +119,7 @@ export function PetForm({ pet }: Props) {
         fd.append("photo", photoFile, "photo.jpg");
         const photoRes = await fetch(`/api/pets/${saved.id}/photo`, { method: "POST", body: fd });
         if (!photoRes.ok) {
-          setError("La photo n'a pas pu être sauvegardée. Réessayez depuis la fiche animal.");
+          setError(t("photoError"));
           return;
         }
       }
@@ -117,7 +127,7 @@ export function PetForm({ pet }: Props) {
       router.push(`/pets/${saved.id}`);
       router.refresh();
     } catch {
-      setError("Une erreur inattendue est survenue");
+      setError(tCommon("unexpectedError"));
     }
   }
 
@@ -153,14 +163,14 @@ export function PetForm({ pet }: Props) {
           className="hidden"
           onChange={handlePhotoChange}
         />
-        <p className="text-xs text-muted-foreground">Cliquez pour ajouter une photo</p>
+        <p className="text-xs text-muted-foreground">{t("photoHint")}</p>
       </div>
 
       {/* Crop modal */}
       <Dialog open={!!cropSrc} onOpenChange={v => { if (!v) setCropSrc(null); }}>
         <DialogContent>
           <DialogHeader onClose={() => setCropSrc(null)}>
-            <DialogTitle>Recadrer la photo</DialogTitle>
+            <DialogTitle>{t("cropTitle")}</DialogTitle>
           </DialogHeader>
           {cropSrc && (
             <ImageCrop
@@ -175,23 +185,23 @@ export function PetForm({ pet }: Props) {
 
       {/* Name */}
       <div className="space-y-1.5">
-        <Label htmlFor="name">Nom *</Label>
-        <Input id="name" placeholder="Ex : Luna" {...register("name")} />
+        <Label htmlFor="name">{t("name")} *</Label>
+        <Input id="name" placeholder={t("namePlaceholder")} {...register("name")} />
         {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
       </div>
 
       {/* Species */}
       <div className="space-y-1.5">
-        <Label htmlFor="species">Espèce *</Label>
+        <Label htmlFor="species">{t("species")} *</Label>
         <Input
           id="species"
-          placeholder="Ex : Chien"
+          placeholder={t("speciesPlaceholder")}
           list="species-list"
           {...register("species")}
         />
         <datalist id="species-list">
-          {SPECIES_OPTIONS.map((s) => (
-            <option key={s} value={s} />
+          {SPECIES_KEYS.map((key) => (
+            <option key={key} value={tSpecies(key)} />
           ))}
         </datalist>
         {errors.species && <p className="text-xs text-destructive">{errors.species.message}</p>}
@@ -199,23 +209,23 @@ export function PetForm({ pet }: Props) {
 
       {/* Breed */}
       <div className="space-y-1.5">
-        <Label htmlFor="breed">Race / Variété</Label>
-        <Input id="breed" placeholder="Ex : Labrador" {...register("breed")} />
+        <Label htmlFor="breed">{t("breed")}</Label>
+        <Input id="breed" placeholder={t("breedPlaceholder")} {...register("breed")} />
       </div>
 
       {/* Birth date */}
       <div className="space-y-1.5">
-        <Label htmlFor="birthDate">Date de naissance</Label>
+        <Label htmlFor="birthDate">{t("birthDate")}</Label>
         <Input id="birthDate" type="date" {...register("birthDate")} />
       </div>
 
       {/* Notes */}
       <div className="space-y-1.5">
-        <Label htmlFor="notes">Notes</Label>
+        <Label htmlFor="notes">{tCommon("notes")}</Label>
         <textarea
           id="notes"
           rows={3}
-          placeholder="Allergies, comportement, informations importantes..."
+          placeholder={t("notesPlaceholder")}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
           {...register("notes")}
         />
@@ -225,14 +235,14 @@ export function PetForm({ pet }: Props) {
       <div className="flex gap-3 pt-2">
         <Button type="submit" disabled={isSubmitting} className="flex-1">
           {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {pet ? "Enregistrer les modifications" : "Ajouter l'animal"}
+          {pet ? tCommon("saveChanges") : t("addPet")}
         </Button>
         <Button
           type="button"
           variant="outline"
           onClick={() => router.back()}
         >
-          Annuler
+          {tCommon("cancel")}
         </Button>
       </div>
     </form>

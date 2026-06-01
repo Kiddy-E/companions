@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
 import Link from "next/link";
 import { ArrowLeft, Edit, PawPrint, Syringe, Plus, Calendar, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,10 +10,11 @@ import { Separator } from "@/components/ui/separator";
 import { QuickEventButtons } from "@/components/quick-event-buttons";
 import { JournalList } from "@/components/journal-list";
 import { DeletePetButton } from "@/components/delete-pet-button";
-import { differenceInYears, differenceInMonths, formatRelativeTime } from "@/lib/date-utils";
+import { differenceInYears, differenceInMonths, getRelativeTimeParts } from "@/lib/date-utils";
 import { getSessionFromCookie } from "@/lib/auth/session";
 import { Role } from "@/generated/prisma";
-import { EVENT_LABEL_MAP, getSpeciesProfile, SPECIES_QUICK_ACTIONS } from "@/lib/species-profiles";
+import { getSpeciesProfile, SPECIES_QUICK_ACTIONS } from "@/lib/species-profiles";
+import { getEventMeta } from "@/lib/event-meta-server";
 import { buildLastEventMap } from "@/lib/event-utils";
 import { checkMealWarnings, formatMealWarnings } from "@/lib/meal-warnings";
 
@@ -56,6 +58,17 @@ export default async function PetDetailPage({ params }: Props) {
   if (!pet) notFound();
   if (!session) redirect("/login");
 
+  const t = await getTranslations("petDetail");
+  const tCommon = await getTranslations("common");
+  const tMeal = await getTranslations("mealWarnings");
+  const tRel = await getTranslations("relativeTime");
+  const locale = await getLocale();
+  const eventMeta = await getEventMeta();
+  const relativeTime = (d: Date | string) => {
+    const p = getRelativeTimeParts(d);
+    return tRel(p.unit, { count: p.count });
+  };
+
   const now = new Date();
   const settings: PetSettings = (pet.settings as PetSettings) ?? {};
   const overdueVaccines = pet.vaccines.filter(v => v.dueAt && new Date(v.dueAt) < now);
@@ -86,21 +99,21 @@ export default async function PetDetailPage({ params }: Props) {
   const litterWarnings: string[] = [];
   if (settings.litterCleanHours) {
     if (!lastLitterCleanAt) {
-      litterWarnings.push("🧹 Litière jamais nettoyée");
+      litterWarnings.push(t("litterNeverCleaned"));
     } else {
       const h = (now.getTime() - lastLitterCleanAt.getTime()) / 3600000;
       if (h > settings.litterCleanHours)
-        litterWarnings.push(`🧹 Nettoyage en retard (${Math.floor(h)}h / max ${settings.litterCleanHours}h)`);
+        litterWarnings.push(t("litterCleanLate", { hours: Math.floor(h), max: settings.litterCleanHours }));
     }
   }
   if (settings.litterChangeHours) {
     if (!lastLitterChangeAt) {
-      litterWarnings.push("♻️ Litière jamais changée");
+      litterWarnings.push(t("litterNeverChanged"));
     } else {
       const h = (now.getTime() - lastLitterChangeAt.getTime()) / 3600000;
       if (h > settings.litterChangeHours) {
         const days = Math.round(settings.litterChangeHours / 24);
-        litterWarnings.push(`♻️ Changement en retard (${Math.floor(h / 24)}j / max ${days}j)`);
+        litterWarnings.push(t("litterChangeLate", { days: Math.floor(h / 24), max: days }));
       }
     }
   }
@@ -112,7 +125,8 @@ export default async function PetDetailPage({ params }: Props) {
     e => e.type === "MEAL" && new Date(e.occurredAt) >= todayStart
   );
   const mealWarning = formatMealWarnings(
-    checkMealWarnings(settings.meals ?? [], settings.mealGrams, todayMealEvents, now)
+    checkMealWarnings(settings.meals ?? [], settings.mealGrams, todayMealEvents, now),
+    tMeal
   );
 
   // Training skills: latest progress per skill name
@@ -137,7 +151,7 @@ export default async function PetDetailPage({ params }: Props) {
     <div className="space-y-6">
       <div className="flex items-start gap-4">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
-          <Link href="/pets"><ArrowLeft className="h-4 w-4 mr-1" />Animaux</Link>
+          <Link href="/pets"><ArrowLeft className="h-4 w-4 mr-1" />{t("back")}</Link>
         </Button>
       </div>
 
@@ -158,18 +172,18 @@ export default async function PetDetailPage({ params }: Props) {
           </p>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {pet.birthDate && (
-              <Badge variant="secondary" className="text-xs">🎂 {formatAge(pet.birthDate)}</Badge>
+              <Badge variant="secondary" className="text-xs">🎂 {formatAge(pet.birthDate, t)}</Badge>
             )}
             {overdueVaccines.length > 0 && (
               <Badge variant="destructive" className="text-xs">
-                ⚠️ {overdueVaccines.length} vaccin{overdueVaccines.length > 1 ? "s" : ""} en retard
+                ⚠️ {t("vaccinesOverdue", { count: overdueVaccines.length })}
               </Badge>
             )}
           </div>
         </div>
         <div className="flex gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" asChild>
-            <Link href={`/pets/${pet.id}/edit`}><Edit className="h-3.5 w-3.5 mr-1.5" />Modifier</Link>
+            <Link href={`/pets/${pet.id}/edit`}><Edit className="h-3.5 w-3.5 mr-1.5" />{t("edit")}</Link>
           </Button>
           <DeletePetButton petId={pet.id} petName={pet.name} />
         </div>
@@ -200,18 +214,18 @@ export default async function PetDetailPage({ params }: Props) {
       {/* Récap */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Récapitulatif</CardTitle>
+          <CardTitle className="text-sm font-medium">{t("recap")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {recapTypes.map(type => {
-              const { emoji, label } = EVENT_LABEL_MAP[type] ?? { emoji: "📝", label: type };
+              const { emoji, label } = eventMeta(type);
               const last = lastEventMap[type];
               return (
                 <div key={type} className="rounded-xl bg-muted/40 px-3 py-2.5 space-y-0.5">
                   <p className="text-xs text-muted-foreground">{emoji} {label}</p>
                   <p className={`text-sm font-medium ${last ? "text-foreground" : "text-muted-foreground"}`}>
-                    {last ? formatRelativeTime(last) : "Jamais"}
+                    {last ? relativeTime(last) : tCommon("never")}
                   </p>
                 </div>
               );
@@ -220,7 +234,7 @@ export default async function PetDetailPage({ params }: Props) {
               <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 px-3 py-2.5 space-y-0.5">
                 <p className="text-xs text-amber-700 dark:text-amber-300">💉 {nextVaccine.name}</p>
                 <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                  {new Date(nextVaccine.dueAt!).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                  {new Date(nextVaccine.dueAt!).toLocaleDateString(locale, { day: "numeric", month: "short" })}
                 </p>
               </div>
             )}
@@ -231,7 +245,7 @@ export default async function PetDetailPage({ params }: Props) {
       {/* Quick actions */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Actions rapides</CardTitle>
+          <CardTitle className="text-sm font-medium">{t("quickActions")}</CardTitle>
         </CardHeader>
         <CardContent>
           <QuickEventButtons
@@ -249,7 +263,7 @@ export default async function PetDetailPage({ params }: Props) {
       {skills.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">🏅 Compétences</CardTitle>
+            <CardTitle className="text-sm font-medium">🏅 {t("skills")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {skills.map(([name, data]) => (
@@ -269,7 +283,7 @@ export default async function PetDetailPage({ params }: Props) {
                     style={{ width: `${data.progress}%` }}
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">{formatRelativeTime(data.lastDate)}</p>
+                <p className="text-xs text-muted-foreground">{relativeTime(data.lastDate)}</p>
               </div>
             ))}
           </CardContent>
@@ -282,14 +296,14 @@ export default async function PetDetailPage({ params }: Props) {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Journal ({pet._count.events})
+              {t("journal")} ({pet._count.events})
             </h2>
             {pet._count.events > 50 && (
-              <Link href={`/journal?petId=${pet.id}`} className="text-xs text-primary hover:underline">Voir tout</Link>
+              <Link href={`/journal?petId=${pet.id}`} className="text-xs text-primary hover:underline">{t("seeAll")}</Link>
             )}
           </div>
           {pet.events.length === 0 ? (
-            <Card><CardContent className="py-8 text-center"><p className="text-sm text-muted-foreground">Aucun événement enregistré</p></CardContent></Card>
+            <Card><CardContent className="py-8 text-center"><p className="text-sm text-muted-foreground">{t("noEvents")}</p></CardContent></Card>
           ) : (
             <JournalList
               events={pet.events.map(e => ({ ...e, occurredAt: e.occurredAt.toISOString() }))}
@@ -304,7 +318,7 @@ export default async function PetDetailPage({ params }: Props) {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium flex items-center gap-2">
               <Syringe className="h-4 w-4" />
-              Vaccins ({pet.vaccines.length})
+              {t("vaccinesTitle")} ({pet.vaccines.length})
             </h2>
             <Button variant="ghost" size="sm" asChild>
               <Link href={`/pets/${pet.id}/vaccines/new`}><Plus className="h-3.5 w-3.5" /></Link>
@@ -313,7 +327,7 @@ export default async function PetDetailPage({ params }: Props) {
           <Card>
             <CardContent className="pt-4">
               {pet.vaccines.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">Aucun vaccin enregistré</p>
+                <p className="text-sm text-muted-foreground text-center py-4">{t("noVaccines")}</p>
               ) : (
                 <div className="space-y-0">
                   {pet.vaccines.map((vaccine, i) => {
@@ -325,13 +339,13 @@ export default async function PetDetailPage({ params }: Props) {
                           <div className="min-w-0">
                             <p className="text-sm font-medium">{vaccine.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(vaccine.administeredAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                              {new Date(vaccine.administeredAt).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" })}
                               {vaccine.vet ? ` · ${vaccine.vet}` : ""}
                             </p>
                           </div>
                           {vaccine.dueAt && (
                             <Badge variant={overdue ? "destructive" : dueSoon ? "outline" : "secondary"} className="text-xs flex-shrink-0">
-                              Rappel {new Date(vaccine.dueAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                              {t("reminder", { date: new Date(vaccine.dueAt).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) })}
                             </Badge>
                           )}
                         </div>
@@ -349,11 +363,14 @@ export default async function PetDetailPage({ params }: Props) {
   );
 }
 
-function formatAge(birthDate: Date): string {
+function formatAge(
+  birthDate: Date,
+  t: (key: "ageYears" | "ageMonths" | "ageUnderMonth", values?: Record<string, number>) => string
+): string {
   const now = new Date();
   const years = differenceInYears(now, new Date(birthDate));
-  if (years >= 1) return `${years} an${years > 1 ? "s" : ""}`;
+  if (years >= 1) return t("ageYears", { count: years });
   const months = differenceInMonths(now, new Date(birthDate));
-  if (months >= 1) return `${months} mois`;
-  return "< 1 mois";
+  if (months >= 1) return t("ageMonths", { count: months });
+  return t("ageUnderMonth");
 }

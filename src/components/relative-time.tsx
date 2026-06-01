@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatRelativeTime } from "@/lib/date-utils";
+import { useTranslations } from "next-intl";
+import { getRelativeTimeParts } from "@/lib/date-utils";
 
 export function RelativeTime({ date }: { date: Date | string }) {
-  const [text, setText] = useState(() => formatRelativeTime(date));
+  const t = useTranslations("relativeTime");
+  const [parts, setParts] = useState(() => getRelativeTimeParts(date));
 
   useEffect(() => {
-    setText(formatRelativeTime(date));
-    const interval = setInterval(() => setText(formatRelativeTime(date)), 30000);
+    setParts(getRelativeTimeParts(date));
+    const interval = setInterval(() => setParts(getRelativeTimeParts(date)), 30000);
     return () => clearInterval(interval);
   }, [date]);
 
-  return <span>{text}</span>;
+  return <span>{t(parts.unit, { count: parts.count })}</span>;
 }

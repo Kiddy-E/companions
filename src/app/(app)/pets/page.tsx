@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getSessionFromCookie } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Plus, PawPrint } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,11 +10,15 @@ import { QuickEventButtons } from "@/components/quick-event-buttons";
 import { buildLastEventMap } from "@/lib/event-utils";
 import { differenceInYears, differenceInMonths } from "@/lib/date-utils";
 import { RelativeTime } from "@/components/relative-time";
-import { EVENT_LABEL_MAP, getSpeciesProfile } from "@/lib/species-profiles";
+import { getSpeciesProfile } from "@/lib/species-profiles";
+import { getEventMeta } from "@/lib/event-meta-server";
 
 export default async function PetsPage() {
   const session = await getSessionFromCookie();
   if (!session) redirect("/login");
+
+  const t = await getTranslations("pets");
+  const eventMeta = await getEventMeta();
 
   const pets = await db.pet.findMany({
     where: { active: true },
@@ -39,15 +44,15 @@ export default async function PetsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Animaux</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            {pets.length === 0 ? "Aucun animal" : `${pets.length} ${pets.length > 1 ? "animaux" : "animal"}`}
+            {pets.length === 0 ? t("none") : pets.length > 1 ? t("countOther", { count: pets.length }) : t("countOne", { count: pets.length })}
           </p>
         </div>
         <Button asChild size="sm">
           <Link href="/pets/new">
             <Plus className="h-4 w-4 mr-1.5" />
-            Ajouter
+            {t("add")}
           </Link>
         </Button>
       </div>
@@ -55,14 +60,14 @@ export default async function PetsPage() {
       {pets.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center">
           <PawPrint className="h-12 w-12 text-muted-foreground/40 mb-4" />
-          <h3 className="font-semibold text-lg">Aucun animal pour l&#39;instant</h3>
+          <h3 className="font-semibold text-lg">{t("noPetsTitle")}</h3>
           <p className="text-muted-foreground text-sm mt-1 mb-4">
-            Commencez par ajouter votre premier animal
+            {t("noPetsDesc")}
           </p>
           <Button asChild>
             <Link href="/pets/new">
               <Plus className="h-4 w-4 mr-1.5" />
-              Ajouter un animal
+              {t("addPet")}
             </Link>
           </Button>
         </div>
@@ -108,14 +113,14 @@ export default async function PetsPage() {
                 <CardContent className="space-y-3">
                   {latestEntry ? (
                     <p className="text-xs text-muted-foreground">
-                      Dernière activité :{" "}
+                      {t("lastActivity")}{" "}
                       <span className="font-medium text-foreground">
-                        {EVENT_LABEL_MAP[latestEntry[0]]?.emoji}{" "}{EVENT_LABEL_MAP[latestEntry[0]]?.label ?? latestEntry[0]}
+                        {eventMeta(latestEntry[0]).emoji}{" "}{eventMeta(latestEntry[0]).label}
                       </span>{" "}
                       <RelativeTime date={latestEntry[1]} />
                     </p>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Aucune activité enregistrée</p>
+                    <p className="text-xs text-muted-foreground">{t("noActivity")}</p>
                   )}
                   <QuickEventButtons
                     petId={pet.id}
