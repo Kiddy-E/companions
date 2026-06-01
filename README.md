@@ -2,13 +2,11 @@
 
 Application self-hostable de suivi des animaux de compagnie. PWA installable, API REST pour Home Assistant.
 
-## Déploiement rapide
+## Déploiement
 
-### Prérequis
-- Docker + Docker Compose
-- Un reverse proxy avec TLS (Caddy recommandé)
+### Option A — Docker Compose classique (Caddy/Traefik/nginx)
 
-### 1. Préparer l'environnement
+#### 1. Préparer l'environnement
 
 ```bash
 cp .env.example .env
@@ -18,21 +16,26 @@ Remplir `.env` :
 
 ```env
 DB_PASSWORD=<mot_de_passe_fort>
-SESSION_SECRET=<openssl rand -hex 32>
+SESSION_SECRET=<64 caractères aléatoires minimum>
 NEXT_PUBLIC_APP_URL=https://companions.yourdomain.com
 ```
 
-### 2. Démarrer
+Générer `SESSION_SECRET` :
+```bash
+openssl rand -hex 32
+```
+
+#### 2. Démarrer
 
 ```bash
 docker compose up -d
 ```
 
-Au premier démarrage, le conteneur applique automatiquement les migrations Prisma, puis démarre l'app.
+Au premier démarrage, les migrations Prisma s'appliquent automatiquement, puis l'app démarre.
 
-Ouvrir `https://companions.yourdomain.com` → écran de création du compte admin.
+Ouvrir `https://companions.yourdomain.com/` (la racine `/`, pas `/login`) → écran de création du compte admin.
 
-### 3. Reverse proxy (Caddy)
+#### 3. Reverse proxy (Caddy)
 
 ```caddyfile
 companions.yourdomain.com {
@@ -41,6 +44,102 @@ companions.yourdomain.com {
 ```
 
 Caddy gère TLS automatiquement via Let's Encrypt.
+
+---
+
+### Option B — Portainer + Cloudflare Tunnel (NAS/homelab)
+
+Pour un déploiement sur Proxmox, Synology ou tout homelab avec Portainer et tunnel Cloudflare (sans exposer de port directement sur Internet).
+
+#### 1. Image Docker
+
+L'image est publiée automatiquement sur GHCR à chaque push sur `master` :
+
+```
+ghcr.io/kiddy-e/companions:latest
+```
+
+#### 2. Stack Portainer
+
+Dans Portainer → **Stacks** → **Add stack** → **Web editor**, coller :
+
+```yaml
+version: "3.8"
+services:
+  app:
+    image: ghcr.io/kiddy-e/companions:latest
+    container_name: companions
+    restart: unless-stopped
+    ports:
+      - "8484:3000"
+    volumes:
+      - companions_uploads:/data/uploads
+    environment:
+      - TZ=Europe/Paris
+      - DATABASE_URL=postgresql://companions:${COMPANIONS_DB_PASSWORD}@db:5432/companions?schema=public
+      - SESSION_SECRET=${COMPANIONS_SESSION_SECRET}
+      - UPLOAD_DIR=/data/uploads
+      - NEXT_PUBLIC_APP_URL=${COMPANIONS_APP_URL}
+      - NODE_ENV=production
+      - SECURE_COOKIES=false
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+  db:
+    image: postgres:16-alpine
+    container_name: companions_db
+    restart: unless-stopped
+    volumes:
+      - companions_pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=companions
+      - POSTGRES_USER=companions
+      - POSTGRES_PASSWORD=${COMPANIONS_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U companions -d companions"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  companions_pgdata:
+  companions_uploads:
+```
+
+En bas de la page, ajouter les variables d'environnement :
+
+| Variable | Valeur |
+|----------|--------|
+| `COMPANIONS_DB_PASSWORD` | mot de passe fort |
+| `COMPANIONS_SESSION_SECRET` | 64 caractères aléatoires minimum |
+| `COMPANIONS_APP_URL` | `https://companions.yourdomain.com` |
+
+> `SECURE_COOKIES=false` est nécessaire si tu accèdes aussi via HTTP local (IP directe). Si tu passes exclusivement par Cloudflare HTTPS, tu peux le passer à `true`.
+
+#### 3. Cloudflare Tunnel
+
+Dans le dashboard Cloudflare → **Zero Trust** → **Networks** → **Tunnels** → ton tunnel → **Edit** → **Public Hostnames** → **Add a public hostname** :
+
+| Champ | Valeur |
+|-------|--------|
+| Subdomain | `companions` |
+| Domain | `yourdomain.com` |
+| Type | `HTTP` |
+| URL | `IP-DE-TA-VM:8484` |
+
+> Utiliser l'IP de la VM (ex: `192.168.1.x`), pas `localhost` — le container cloudflared a son propre `localhost`.
+
+#### 4. Premier lancement
+
+Naviguer vers `https://companions.yourdomain.com/` (la racine) → l'app redirige automatiquement vers l'écran de création du compte admin.
 
 ---
 
@@ -54,6 +153,7 @@ Caddy gère TLS automatiquement via Let's Encrypt.
 | `UPLOAD_DIR` | — | Dossier photos (défaut: `/data/uploads`) |
 | `NEXT_PUBLIC_APP_URL` | — | URL publique (défaut: `http://localhost:3000`) |
 | `PORT` | — | Port d'écoute (défaut: `3000`) |
+| `SECURE_COOKIES` | — | `true` (défaut) en HTTPS, `false` si accès HTTP local |
 
 ---
 
